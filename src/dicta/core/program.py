@@ -635,3 +635,106 @@ def build_supervised_worker_demo_program() -> Program:
         note="worker restarted; restores worker is Alive",
     )
     return _make_program("supervisor-demo", concept, revision)
+
+
+def build_agent_edit_demo_program() -> Program:
+    """Build the hard-coded representation for appraising an AI edit proposal."""
+
+    datum = receive_datum(
+        "agent proposes: replace add_one(x) = x + 1 with add_one(x) = 1 + x",
+        source="dicta demo",
+        note="hard-coded AI agent edit proposal",
+    )
+    concept, purpose = _make_concept(
+        "agent-edit-demo",
+        "preserve behavior while improving form",
+    )
+
+    proposal_qualification = _make_qualification(
+        strength=QualificationStrength.ASSERTED,
+        basis="agent proposal",
+        conditions=["untrusted input"],
+        timing="before appraisal",
+    )
+    behavior_qualification = _make_qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="add_one contract",
+        conditions=["Number"],
+        timing="during appraisal",
+    )
+    equivalence_qualification = _make_qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="commutative addition for Number",
+        conditions=["x is Number"],
+        timing="during appraisal",
+    )
+    acceptance_qualification = _make_qualification(
+        strength=QualificationStrength.TESTED,
+        basis="checked equivalence",
+        conditions=["x + 1 equals 1 + x for Number"],
+        timing="after appraisal",
+    )
+
+    _add_dicta(
+        concept,
+        [
+            ("agent edit", "Datum", proposal_qualification, "agent edit is Datum"),
+            (
+                "add_one",
+                "accepts Number",
+                behavior_qualification,
+                "add_one accepts Number",
+            ),
+            (
+                "add_one",
+                "returns Number",
+                behavior_qualification,
+                "add_one returns Number",
+            ),
+            (
+                "x + 1",
+                "equals 1 + x for Number",
+                equivalence_qualification,
+                "x + 1 equals 1 + x for Number",
+            ),
+            (
+                "agent edit",
+                "preserves add_one behavior",
+                acceptance_qualification,
+                "agent edit preserves add_one behavior",
+            ),
+            (
+                "agent edit",
+                "qualifies by checked equivalence",
+                acceptance_qualification,
+                "agent edit qualifies by checked equivalence",
+            ),
+        ],
+    )
+
+    disparity = Disparity(
+        datum=datum,
+        concept=concept,
+        purpose=purpose,
+        description="agent edit is Datum before behavior Qualification",
+        severity="appraising",
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="accept agent edit because behavior qualifies",
+        basis="checked equivalence preserves add_one behavior",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="agent edit accepted",
+        status="accepted",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept records accepted agent edit",
+            "Concept preserves add_one behavior",
+        ],
+        note="agent edit accepted; preserves add_one behavior",
+    )
+    return _make_program("agent-edit-demo", concept, revision)

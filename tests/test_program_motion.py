@@ -1,5 +1,6 @@
 from dicta.core.models import Program
 from dicta.core.program import (
+    build_agent_edit_demo_program,
     build_arithmetic_demo_program,
     build_counter_revision_demo_program,
     build_file_write_demo_program,
@@ -324,3 +325,64 @@ def test_supervised_worker_demo_revision_mentions_restart_or_restore() -> None:
 
     assert "worker restarted" in revision_text
     assert "restores worker is Alive" in revision_text
+
+
+def test_agent_edit_demo_produces_program() -> None:
+    program = build_agent_edit_demo_program()
+
+    assert isinstance(program, Program)
+
+
+def test_agent_edit_demo_history_contains_revision() -> None:
+    program = build_agent_edit_demo_program()
+
+    assert len(program.history) >= 1
+
+
+def test_agent_edit_demo_concept_contains_agent_edit_as_datum() -> None:
+    program = build_agent_edit_demo_program()
+
+    assert any(
+        dictum.subject == "agent edit" and dictum.meaning == "Datum"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_agent_edit_demo_concept_contains_behavior_preservation() -> None:
+    program = build_agent_edit_demo_program()
+
+    assert any(
+        dictum.subject == "agent edit"
+        and dictum.meaning == "preserves add_one behavior"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_agent_edit_demo_concept_contains_checked_equivalence_qualification() -> None:
+    program = build_agent_edit_demo_program()
+
+    assert any(
+        dictum.subject == "agent edit"
+        and dictum.meaning == "qualifies by checked equivalence"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_agent_edit_demo_outcome_or_revision_mentions_acceptance() -> None:
+    program = build_agent_edit_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "agent edit accepted" in str(revision.outcome.result) or (
+        "agent edit accepted" in revision_text
+    )
+
+
+def test_agent_edit_demo_revision_mentions_preserved_behavior() -> None:
+    program = build_agent_edit_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "preserves add_one behavior" in revision_text
