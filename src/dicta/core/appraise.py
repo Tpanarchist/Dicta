@@ -46,14 +46,14 @@ class CounterIncrementDatum(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    initial: int
+    initial: int | str
     increment: int = 1
 
     def statement_text(self) -> str:
         """Return the visible counter revision statement."""
 
         return (
-            f"{self.name} = {self.initial}; "
+            f"{self.name} = {_operand_text(self.initial)}; "
             f"{self.name} = {self.name} + {self.increment}"
         )
 
@@ -165,6 +165,65 @@ def _remove_dictum(concept: Concept, subject: str, meaning: str) -> None:
         for dictum in concept.dicta
         if not (dictum.subject == subject and dictum.meaning == meaning)
     ]
+
+
+def _appraise_refused_counter_revision(
+    datum: CounterIncrementDatum,
+    concept: Concept,
+    purpose: Purpose,
+) -> AppraisalResult:
+    received = receive_datum(
+        datum,
+        source="dicta appraise-refused-counter-demo",
+        note="structured refused counter revision datum",
+    )
+    disparity = Disparity(
+        datum=received,
+        concept=concept,
+        purpose=purpose,
+        description=f"{datum.name} does not qualify as Number",
+        severity="refusing",
+        kind="type_mismatch",
+        tags=("counter",),
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="refuse counter revision because current value does not qualify",
+        basis=f"{datum.name} is Text and + accepts Number, Number",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="counter revision refused",
+        status="refused",
+        kind="refusal",
+        tags=("counter",),
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept records refused counter revision",
+            f"Concept preserves {datum.name} is {_operand_text(datum.initial)}",
+        ],
+        note=(
+            "counter revision refused; "
+            f"preserves {datum.name} is {_operand_text(datum.initial)}"
+        ),
+        kind="preserve_state",
+        tags=("counter", "refusal"),
+    )
+    program = append_revision(
+        Program(name="mechanical-refused-counter-revision-appraisal", concept=concept),
+        revision,
+    )
+    return AppraisalResult(
+        datum=datum,
+        program=program,
+        accepted=False,
+        summary="counter revision refused",
+        disparity=disparity,
+        outcome=outcome,
+        revision=revision,
+    )
 
 
 def _appraise_integer_addition(
@@ -368,28 +427,34 @@ def appraise_counter_revision_result(
     )
     revision_qualification = checked(
         basis="mechanical counter increment",
-        conditions=(f"{datum.name} is Number", f"{datum.name} is {datum.initial}"),
+        conditions=(
+            f"{datum.name} is Number",
+            f"{datum.name} is {_operand_text(datum.initial)}",
+        ),
         timing="after revision",
     )
+    initial_kind = "Number" if isinstance(datum.initial, int) else "Text"
+    initial_tag = "number" if isinstance(datum.initial, int) else "text"
+    initial_value = _operand_text(datum.initial)
 
     add_dictum(
         concept,
         produce_dictum(
             datum.name,
-            "Number",
+            initial_kind,
             type_qualification,
-            display=f"{datum.name} is Number",
+            display=f"{datum.name} is {initial_kind}",
             kind="type",
-            tags=("counter", "number"),
+            tags=("counter", initial_tag),
         ),
     )
     add_dictum(
         concept,
         produce_dictum(
             datum.name,
-            str(datum.initial),
+            initial_value,
             value_qualification,
-            display=f"{datum.name} is {datum.initial}",
+            display=f"{datum.name} is {initial_value}",
             kind="value",
             tags=("counter",),
         ),
@@ -405,6 +470,9 @@ def appraise_counter_revision_result(
             tags=("counter", "arithmetic"),
         ),
     )
+
+    if isinstance(datum.initial, str):
+        return _appraise_refused_counter_revision(datum, concept, purpose)
 
     revised_value = datum.initial + datum.increment
     received = receive_datum(

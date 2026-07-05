@@ -169,6 +169,20 @@ def appraise_counter_demo() -> None:
 
 
 @app.command()
+def appraise_refused_counter_demo() -> None:
+    """Run the mechanically refused structured counter revision demo."""
+
+    datum = CounterIncrementDatum(name="counter", initial="cat", increment=1)
+    _render_demo(
+        appraise_counter_revision_datum(datum),
+        datum.statement_text(),
+        show_purpose=True,
+        show_disparity=True,
+        show_inference=True,
+    )
+
+
+@app.command()
 def file_write_demo() -> None:
     """Run the hard-coded file write effect demo."""
 

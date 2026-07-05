@@ -94,6 +94,19 @@ checkers can inspect the state change without parsing the prose change note.
 
 This is still not syntax and not a general interpreter.
 
+## Mechanical Counter Refusal
+
+The accepted counter appraiser proved that structured Datum can produce an
+applied Revision.
+
+The refused counter appraiser proves the negative rule: structured Datum can
+also refuse Revision when the current Concept does not qualify under Purpose.
+For `counter = "cat"; counter = counter + 1`, the Program preserves
+`counter is Text` and `counter is "cat"` instead of inventing `counter is 1`.
+
+Mutation is therefore not automatically allowed. Mutation is allowed only when
+it qualifies.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

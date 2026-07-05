@@ -42,6 +42,15 @@ def test_counter_increment_datum_can_be_constructed() -> None:
     assert datum.statement_text() == "counter = 0; counter = counter + 1"
 
 
+def test_refused_counter_increment_datum_can_be_constructed() -> None:
+    datum = CounterIncrementDatum(name="counter", initial="cat")
+
+    assert datum.name == "counter"
+    assert datum.initial == "cat"
+    assert datum.increment == 1
+    assert datum.statement_text() == 'counter = "cat"; counter = counter + 1'
+
+
 def test_appraise_arithmetic_datum_returns_program() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -76,6 +85,16 @@ def test_counter_revision_result_is_accepted() -> None:
 
     assert result.accepted is True
     assert "accepted" in result.summary
+
+
+def test_refused_counter_revision_result_is_refused() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert isinstance(result, AppraisalResult)
+    assert result.accepted is False
+    assert "refused" in result.summary
 
 
 def test_valid_arithmetic_result_contains_program_with_visible_result() -> None:
@@ -122,6 +141,14 @@ def test_appraise_counter_revision_datum_returns_program() -> None:
     assert isinstance(program, Program)
 
 
+def test_appraise_refused_counter_revision_datum_returns_program() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert isinstance(program, Program)
+
+
 def test_appraised_arithmetic_program_contains_visible_result() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -159,6 +186,62 @@ def test_appraised_counter_final_concept_removes_old_current_value() -> None:
         dictum.subject == "counter" and dictum.meaning == "0"
         for dictum in program.concept.dicta
     )
+
+
+def test_appraised_refused_counter_preserves_text_type() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert has_dictum_text(program, "counter is Text")
+
+
+def test_appraised_refused_counter_preserves_text_value() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert has_dictum_text(program, 'counter is "cat"')
+
+
+def test_appraised_refused_counter_contains_number_disparity() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert result.disparity is not None
+    assert result.disparity.description == "counter does not qualify as Number"
+    assert result.disparity.kind == "type_mismatch"
+
+
+def test_appraised_refused_counter_outcome_is_refusal() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert result.outcome is not None
+    assert result.outcome.result == "counter revision refused"
+    assert result.outcome.status == "refused"
+
+
+def test_appraised_refused_counter_final_concept_has_no_numeric_result() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert not has_dictum_text(program, "counter is 1")
+
+
+def test_appraised_refused_counter_revision_records_preservation() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert result.revision is not None
+    assert result.revision.changes == [
+        "Concept records refused counter revision",
+        'Concept preserves counter is "cat"',
+    ]
 
 
 def test_appraised_counter_disparity_snapshot_contains_old_value() -> None:
@@ -306,3 +389,16 @@ def test_appraise_counter_cli_renders_expected_visible_text() -> None:
     assert "* counter is 1" in result.output
     assert "* counter may revise from 0 to 1" in result.output
     assert "* Concept replaces counter is 0 with counter is 1" in result.output
+
+
+def test_appraise_refused_counter_cli_renders_expected_visible_text() -> None:
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["appraise-refused-counter-demo"])
+
+    assert result.exit_code == 0
+    assert 'Datum: counter = "cat"; counter = counter + 1' in result.output
+    assert "* counter is Text" in result.output
+    assert '* counter is "cat"' in result.output
+    assert "* counter does not qualify as Number" in result.output
+    assert "* counter revision refused" in result.output
