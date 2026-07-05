@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="dicta_logo.png" alt="Dicta logo" width="220">
+</p>
+
 # Dicta
 
 Dicta is a hosted Python 3.13/Pydantic prototype for a future general-purpose
