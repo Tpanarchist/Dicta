@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dicta"
+version = "0.1.0"
+description = "Hosted Python semantic-kernel prototype for Dicta."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pydantic",
+    "typer",
+    "transitions",
+    "sortedcontainers",
+    "algorithms",
+]
+
+[project.scripts]
+dicta = "dicta.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
