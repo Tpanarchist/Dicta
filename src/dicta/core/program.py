@@ -346,3 +346,132 @@ def build_counter_revision_demo_program() -> Program:
     )
     program = Program(name="counter-revision-demo", concept=concept)
     return append_revision(program, revision)
+
+
+def build_file_write_demo_program() -> Program:
+    """Build the hard-coded effect representation for an accepted file write."""
+
+    datum = receive_datum(
+        'write report.txt "hello"',
+        source="dicta demo",
+        note="hard-coded file write effect",
+    )
+    purpose = Purpose(statement="persist text to file", mode="demo")
+    concept = Concept(name="file-write-demo", purpose=purpose)
+
+    input_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="hard-coded write input",
+        conditions=["demo input"],
+        timing="before effect",
+    )
+    operation_qualification = Qualification(
+        strength=QualificationStrength.ASSERTED,
+        basis="file write effect contract",
+        conditions=["FilePath", "Text"],
+        timing="before effect",
+    )
+    permission_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="demo permission grant",
+        conditions=["report.txt"],
+        timing="before effect",
+    )
+    effect_qualification = Qualification(
+        strength=QualificationStrength.TESTED,
+        basis="accepted write effect",
+        conditions=["Permission qualifies for report.txt"],
+        timing="after effect",
+    )
+
+    add_dictum(
+        concept,
+        produce_dictum(
+            "report.txt",
+            "FilePath",
+            input_qualification,
+            {"display": "report.txt is FilePath"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            '"hello"',
+            "Text",
+            input_qualification,
+            {"display": '"hello" is Text'},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "accepts FilePath, Text",
+            operation_qualification,
+            {"display": "write accepts FilePath, Text"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "changes Disk",
+            operation_qualification,
+            {"display": "write changes Disk"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "requires Permission",
+            operation_qualification,
+            {"display": "write requires Permission"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "Permission",
+            "qualifies for report.txt",
+            permission_qualification,
+            {"display": "Permission qualifies for report.txt"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "report.txt",
+            'contains "hello"',
+            effect_qualification,
+            {"display": 'report.txt contains "hello"'},
+        ),
+    )
+
+    disparity = Disparity(
+        datum=datum,
+        concept=concept,
+        purpose=purpose,
+        description='report.txt does not yet contain "hello"',
+        severity="effect",
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="write may proceed because Permission qualifies",
+        basis="write requires Permission and Permission qualifies for report.txt",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="write accepted",
+        status="accepted",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            'Concept records report.txt contains "hello"',
+            "Concept records Disk changed by write",
+        ],
+        note="Disk changed by write",
+    )
+    program = Program(name="file-write-demo", concept=concept)
+    return append_revision(program, revision)

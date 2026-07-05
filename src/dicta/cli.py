@@ -8,6 +8,7 @@ from dicta import __version__
 from dicta.core.program import (
     build_arithmetic_demo_program,
     build_counter_revision_demo_program,
+    build_file_write_demo_program,
     build_invalid_arithmetic_demo_program,
     dictum_text,
 )
@@ -99,6 +100,35 @@ def counter_demo() -> None:
     inference = outcome.inference
 
     typer.echo("Datum: counter = 0; counter = counter + 1")
+    typer.echo("")
+    typer.echo("Dicta:")
+    for dictum in program.concept.dicta:
+        typer.echo(f"* {dictum_text(dictum)}")
+    typer.echo("")
+    typer.echo("Purpose:")
+    typer.echo(f"* {program.concept.purpose.statement}")
+    typer.echo("")
+    typer.echo("Inference:")
+    typer.echo(f"* {inference.derived}")
+    typer.echo("")
+    typer.echo("Outcome:")
+    typer.echo(f"* {outcome.result}")
+    typer.echo("")
+    typer.echo("Revision:")
+    for change in revision.changes:
+        typer.echo(f"* {change}")
+
+
+@app.command()
+def file_write_demo() -> None:
+    """Run the hard-coded file write effect demo."""
+
+    program = build_file_write_demo_program()
+    revision = program.history[-1]
+    outcome = revision.outcome
+    inference = outcome.inference
+
+    typer.echo('Datum: write report.txt "hello"')
     typer.echo("")
     typer.echo("Dicta:")
     for dictum in program.concept.dicta:

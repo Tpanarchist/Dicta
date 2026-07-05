@@ -2,6 +2,7 @@ from dicta.core.models import Program
 from dicta.core.program import (
     build_arithmetic_demo_program,
     build_counter_revision_demo_program,
+    build_file_write_demo_program,
     build_invalid_arithmetic_demo_program,
 )
 
@@ -111,3 +112,61 @@ def test_counter_revision_demo_records_replacement_meaning() -> None:
     assert "counter is 1" in revision_text
     assert "Concept replaces counter is 0 with counter is 1" in revision.changes
     assert "Concept preserves counter is Number" in revision.changes
+
+
+def test_file_write_demo_produces_program() -> None:
+    program = build_file_write_demo_program()
+
+    assert isinstance(program, Program)
+
+
+def test_file_write_demo_history_contains_revision() -> None:
+    program = build_file_write_demo_program()
+
+    assert len(program.history) >= 1
+
+
+def test_file_write_demo_concept_contains_disk_change_dictum() -> None:
+    program = build_file_write_demo_program()
+
+    assert any(
+        dictum.subject == "write" and dictum.meaning == "changes Disk"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_file_write_demo_concept_contains_permission_requirement() -> None:
+    program = build_file_write_demo_program()
+
+    assert any(
+        dictum.subject == "write" and dictum.meaning == "requires Permission"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_file_write_demo_concept_contains_permission_qualification() -> None:
+    program = build_file_write_demo_program()
+
+    assert any(
+        dictum.subject == "Permission"
+        and dictum.meaning == "qualifies for report.txt"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_file_write_demo_concept_contains_written_content() -> None:
+    program = build_file_write_demo_program()
+
+    assert any(
+        dictum.subject == "report.txt" and dictum.meaning == 'contains "hello"'
+        for dictum in program.concept.dicta
+    )
+
+
+def test_file_write_demo_revision_notes_disk_changed_by_write() -> None:
+    program = build_file_write_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "Disk changed by write" in revision_text
