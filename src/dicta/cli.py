@@ -5,6 +5,7 @@ from importlib.metadata import PackageNotFoundError, version as metadata_version
 import typer
 
 from dicta import __version__
+from dicta.core.models import Program
 from dicta.core.program import (
     build_arithmetic_demo_program,
     build_counter_revision_demo_program,
@@ -27,6 +28,40 @@ def package_version() -> str:
         return __version__
 
 
+def _echo_section(title: str, items: list[object]) -> None:
+    typer.echo("")
+    typer.echo(f"{title}:")
+    for item in items:
+        typer.echo(f"* {item}")
+
+
+def _render_demo(
+    program: Program,
+    datum: str,
+    *,
+    show_qualification: bool = False,
+    show_purpose: bool = True,
+    show_disparity: bool = False,
+    show_inference: bool = True,
+) -> None:
+    revision = program.history[-1]
+    outcome = revision.outcome
+    inference = outcome.inference
+
+    typer.echo(f"Datum: {datum}")
+    _echo_section("Dicta", [dictum_text(dictum) for dictum in program.concept.dicta])
+    if show_qualification:
+        _echo_section("Qualification", [revision.note or ""])
+    if show_purpose and program.concept.purpose is not None:
+        _echo_section("Purpose", [program.concept.purpose.statement])
+    if show_disparity:
+        _echo_section("Disparity", [inference.from_disparity.description])
+    if show_inference:
+        _echo_section("Inference", [inference.derived])
+    _echo_section("Outcome", [outcome.result])
+    _echo_section("Revision", revision.changes)
+
+
 @app.command()
 def version() -> None:
     """Print the package version."""
@@ -38,179 +73,60 @@ def version() -> None:
 def demo() -> None:
     """Run the hard-coded 3 + 4 semantic demo."""
 
-    program = build_arithmetic_demo_program()
-    revision = program.history[-1]
-    outcome = revision.outcome
-
-    typer.echo("Datum: 3 + 4")
-    typer.echo("")
-    typer.echo("Dicta:")
-    for dictum in program.concept.dicta:
-        typer.echo(f"* {dictum_text(dictum)}")
-    typer.echo("")
-    typer.echo("Qualification:")
-    typer.echo(f"* {revision.note}")
-    typer.echo("")
-    typer.echo("Outcome:")
-    typer.echo(f"* {outcome.result}")
-    typer.echo("")
-    typer.echo("Revision:")
-    for change in revision.changes:
-        typer.echo(f"* {change}")
+    _render_demo(
+        build_arithmetic_demo_program(),
+        "3 + 4",
+        show_qualification=True,
+        show_purpose=False,
+        show_inference=False,
+    )
 
 
 @app.command()
 def invalid_demo() -> None:
     """Run the hard-coded 3 + "cat" disparity demo."""
 
-    program = build_invalid_arithmetic_demo_program()
-    revision = program.history[-1]
-    outcome = revision.outcome
-    inference = outcome.inference
-    disparity = inference.from_disparity
-
-    typer.echo('Datum: 3 + "cat"')
-    typer.echo("")
-    typer.echo("Dicta:")
-    for dictum in program.concept.dicta:
-        typer.echo(f"* {dictum_text(dictum)}")
-    typer.echo("")
-    typer.echo("Purpose:")
-    typer.echo(f"* {program.concept.purpose.statement}")
-    typer.echo("")
-    typer.echo("Disparity:")
-    typer.echo(f"* {disparity.description}")
-    typer.echo("")
-    typer.echo("Inference:")
-    typer.echo(f"* {inference.derived}")
-    typer.echo("")
-    typer.echo("Outcome:")
-    typer.echo(f"* {outcome.result}")
-    typer.echo("")
-    typer.echo("Revision:")
-    for change in revision.changes:
-        typer.echo(f"* {change}")
+    _render_demo(
+        build_invalid_arithmetic_demo_program(),
+        '3 + "cat"',
+        show_disparity=True,
+    )
 
 
 @app.command()
 def counter_demo() -> None:
     """Run the hard-coded counter revision demo."""
 
-    program = build_counter_revision_demo_program()
-    revision = program.history[-1]
-    outcome = revision.outcome
-    inference = outcome.inference
-
-    typer.echo("Datum: counter = 0; counter = counter + 1")
-    typer.echo("")
-    typer.echo("Dicta:")
-    for dictum in program.concept.dicta:
-        typer.echo(f"* {dictum_text(dictum)}")
-    typer.echo("")
-    typer.echo("Purpose:")
-    typer.echo(f"* {program.concept.purpose.statement}")
-    typer.echo("")
-    typer.echo("Inference:")
-    typer.echo(f"* {inference.derived}")
-    typer.echo("")
-    typer.echo("Outcome:")
-    typer.echo(f"* {outcome.result}")
-    typer.echo("")
-    typer.echo("Revision:")
-    for change in revision.changes:
-        typer.echo(f"* {change}")
+    _render_demo(
+        build_counter_revision_demo_program(),
+        "counter = 0; counter = counter + 1",
+    )
 
 
 @app.command()
 def file_write_demo() -> None:
     """Run the hard-coded file write effect demo."""
 
-    program = build_file_write_demo_program()
-    revision = program.history[-1]
-    outcome = revision.outcome
-    inference = outcome.inference
-
-    typer.echo('Datum: write report.txt "hello"')
-    typer.echo("")
-    typer.echo("Dicta:")
-    for dictum in program.concept.dicta:
-        typer.echo(f"* {dictum_text(dictum)}")
-    typer.echo("")
-    typer.echo("Purpose:")
-    typer.echo(f"* {program.concept.purpose.statement}")
-    typer.echo("")
-    typer.echo("Inference:")
-    typer.echo(f"* {inference.derived}")
-    typer.echo("")
-    typer.echo("Outcome:")
-    typer.echo(f"* {outcome.result}")
-    typer.echo("")
-    typer.echo("Revision:")
-    for change in revision.changes:
-        typer.echo(f"* {change}")
+    _render_demo(build_file_write_demo_program(), 'write report.txt "hello"')
 
 
 @app.command()
 def refused_file_write_demo() -> None:
     """Run the hard-coded refused file write effect demo."""
 
-    program = build_refused_file_write_demo_program()
-    revision = program.history[-1]
-    outcome = revision.outcome
-    inference = outcome.inference
-    disparity = inference.from_disparity
-
-    typer.echo('Datum: write protected/report.txt "hello"')
-    typer.echo("")
-    typer.echo("Dicta:")
-    for dictum in program.concept.dicta:
-        typer.echo(f"* {dictum_text(dictum)}")
-    typer.echo("")
-    typer.echo("Purpose:")
-    typer.echo(f"* {program.concept.purpose.statement}")
-    typer.echo("")
-    typer.echo("Disparity:")
-    typer.echo(f"* {disparity.description}")
-    typer.echo("")
-    typer.echo("Inference:")
-    typer.echo(f"* {inference.derived}")
-    typer.echo("")
-    typer.echo("Outcome:")
-    typer.echo(f"* {outcome.result}")
-    typer.echo("")
-    typer.echo("Revision:")
-    for change in revision.changes:
-        typer.echo(f"* {change}")
+    _render_demo(
+        build_refused_file_write_demo_program(),
+        'write protected/report.txt "hello"',
+        show_disparity=True,
+    )
 
 
 @app.command()
 def supervised_worker_demo() -> None:
     """Run the hard-coded supervised worker failure demo."""
 
-    program = build_supervised_worker_demo_program()
-    revision = program.history[-1]
-    outcome = revision.outcome
-    inference = outcome.inference
-    disparity = inference.from_disparity
-
-    typer.echo("Datum: worker Outcome is crash")
-    typer.echo("")
-    typer.echo("Dicta:")
-    for dictum in program.concept.dicta:
-        typer.echo(f"* {dictum_text(dictum)}")
-    typer.echo("")
-    typer.echo("Purpose:")
-    typer.echo(f"* {program.concept.purpose.statement}")
-    typer.echo("")
-    typer.echo("Disparity:")
-    typer.echo(f"* {disparity.description}")
-    typer.echo("")
-    typer.echo("Inference:")
-    typer.echo(f"* {inference.derived}")
-    typer.echo("")
-    typer.echo("Outcome:")
-    typer.echo(f"* {outcome.result}")
-    typer.echo("")
-    typer.echo("Revision:")
-    for change in revision.changes:
-        typer.echo(f"* {change}")
+    _render_demo(
+        build_supervised_worker_demo_program(),
+        "worker Outcome is crash",
+        show_disparity=True,
+    )

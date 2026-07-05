@@ -86,60 +86,92 @@ def dictum_text(dictum: Dictum) -> str:
     return f"{dictum.subject} is {dictum.meaning}"
 
 
+def _make_qualification(
+    strength: QualificationStrength,
+    basis: str,
+    conditions: list[str],
+    timing: str,
+) -> Qualification:
+    return Qualification(
+        strength=strength,
+        basis=basis,
+        conditions=conditions,
+        timing=timing,
+    )
+
+
+def _make_concept(
+    name: str,
+    purpose_statement: str,
+    mode: str = "demo",
+) -> tuple[Concept, Purpose]:
+    purpose = Purpose(statement=purpose_statement, mode=mode)
+    return Concept(name=name, purpose=purpose), purpose
+
+
+def _make_dictum(
+    subject: str,
+    meaning: str,
+    qualification: Qualification,
+    display: str,
+) -> Dictum:
+    return produce_dictum(subject, meaning, qualification, {"display": display})
+
+
+def _add_dicta(
+    concept: Concept,
+    dicta: list[tuple[str, str, Qualification, str]],
+) -> None:
+    for subject, meaning, qualification, display in dicta:
+        add_dictum(concept, _make_dictum(subject, meaning, qualification, display))
+
+
+def _make_program(name: str, concept: Concept, revision: Revision) -> Program:
+    program = Program(name=name, concept=concept)
+    return append_revision(program, revision)
+
+
 def build_arithmetic_demo_program() -> Program:
     """Build the hard-coded semantic representation for 3 + 4."""
 
     datum = receive_datum("3 + 4", source="dicta demo", note="hard-coded arithmetic")
-    purpose = Purpose(
-        statement="Represent evaluated arithmetic as qualified meaning.",
-        mode="demo",
+    concept, purpose = _make_concept(
+        "arithmetic-demo",
+        "Represent evaluated arithmetic as qualified meaning.",
     )
-    concept = Concept(name="arithmetic-demo", purpose=purpose)
 
-    literal_qualification = Qualification(
+    literal_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded literal recognition",
         conditions=["demo input"],
         timing="demo",
     )
-    operator_qualification = Qualification(
+    operator_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="arithmetic convention",
         conditions=["demo input"],
         timing="demo",
     )
-    result_qualification = Qualification(
+    result_qualification = _make_qualification(
         strength=QualificationStrength.TESTED,
         basis="evaluation",
         conditions=["integer addition"],
         timing="demo",
     )
 
-    add_dictum(
+    _add_dicta(
         concept,
-        produce_dictum("3", "Number", literal_qualification, {"display": "3 is Number"}),
-    )
-    add_dictum(
-        concept,
-        produce_dictum("4", "Number", literal_qualification, {"display": "4 is Number"}),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "+",
-            "accepts Number, Number",
-            operator_qualification,
-            {"display": "+ accepts Number, Number"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "3 + 4",
-            "7",
-            result_qualification,
-            {"display": "3 + 4 is 7"},
-        ),
+        [
+            ("3", "Number", literal_qualification, "3 is Number"),
+            ("4", "Number", literal_qualification, "4 is Number"),
+            (
+                "+",
+                "accepts Number, Number",
+                operator_qualification,
+                "+ accepts Number, Number",
+            ),
+            ("3 + 4", "7", result_qualification, "3 + 4 is 7"),
+        ],
     )
 
     disparity = Disparity(
@@ -160,8 +192,7 @@ def build_arithmetic_demo_program() -> Program:
         changes=["concept records evaluated arithmetic dictum"],
         note="result qualifies by evaluation",
     )
-    program = Program(name="arithmetic-demo", concept=concept)
-    return append_revision(program, revision)
+    return _make_program("arithmetic-demo", concept, revision)
 
 
 def build_invalid_arithmetic_demo_program() -> Program:
@@ -172,43 +203,36 @@ def build_invalid_arithmetic_demo_program() -> Program:
         source="dicta demo",
         note="hard-coded invalid arithmetic",
     )
-    purpose = Purpose(statement="evaluate arithmetic expression", mode="demo")
-    concept = Concept(name="invalid-arithmetic-demo", purpose=purpose)
+    concept, purpose = _make_concept(
+        "invalid-arithmetic-demo",
+        "evaluate arithmetic expression",
+    )
 
-    literal_qualification = Qualification(
+    literal_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded literal recognition",
         conditions=["demo input"],
         timing="demo",
     )
-    operator_qualification = Qualification(
+    operator_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="arithmetic convention",
         conditions=["demo input"],
         timing="demo",
     )
 
-    add_dictum(
+    _add_dicta(
         concept,
-        produce_dictum("3", "Number", literal_qualification, {"display": "3 is Number"}),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            '"cat"',
-            "Text",
-            literal_qualification,
-            {"display": '"cat" is Text'},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "+",
-            "accepts Number, Number",
-            operator_qualification,
-            {"display": "+ accepts Number, Number"},
-        ),
+        [
+            ("3", "Number", literal_qualification, "3 is Number"),
+            ('"cat"', "Text", literal_qualification, '"cat" is Text'),
+            (
+                "+",
+                "accepts Number, Number",
+                operator_qualification,
+                "+ accepts Number, Number",
+            ),
+        ],
     )
 
     disparity = Disparity(
@@ -233,8 +257,7 @@ def build_invalid_arithmetic_demo_program() -> Program:
         changes=["Concept records invalid operand disparity"],
         note="disparity qualifies refusal",
     )
-    program = Program(name="invalid-arithmetic-demo", concept=concept)
-    return append_revision(program, revision)
+    return _make_program("invalid-arithmetic-demo", concept, revision)
 
 
 def build_counter_revision_demo_program() -> Program:
@@ -245,78 +268,50 @@ def build_counter_revision_demo_program() -> Program:
         source="dicta demo",
         note="hard-coded counter revision",
     )
-    purpose = Purpose(statement="revise counter by valid increment", mode="demo")
-    concept = Concept(name="counter-revision-demo", purpose=purpose)
+    concept, purpose = _make_concept(
+        "counter-revision-demo",
+        "revise counter by valid increment",
+    )
 
-    type_qualification = Qualification(
+    type_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="counter binding",
         conditions=["demo input"],
         timing="before revision",
     )
-    value_qualification = Qualification(
+    value_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="counter state",
         conditions=["demo input"],
         timing="before revision",
     )
-    operator_qualification = Qualification(
+    operator_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="arithmetic convention",
         conditions=["Number, Number"],
         timing="during revision",
     )
-    revision_qualification = Qualification(
+    revision_qualification = _make_qualification(
         strength=QualificationStrength.TESTED,
         basis="valid increment",
         conditions=["counter is Number", "counter is 0"],
         timing="after revision",
     )
 
-    add_dictum(
+    _add_dicta(
         concept,
-        produce_dictum(
-            "counter",
-            "Number",
-            type_qualification,
-            {"display": "counter is Number"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "counter",
-            "0",
-            value_qualification,
-            {"display": "counter is 0"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "+",
-            "accepts Number, Number",
-            operator_qualification,
-            {"display": "+ accepts Number, Number"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "counter + 1",
-            "1",
-            revision_qualification,
-            {"display": "counter + 1 is 1"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "counter",
-            "1",
-            revision_qualification,
-            {"display": "counter is 1"},
-        ),
+        [
+            ("counter", "Number", type_qualification, "counter is Number"),
+            ("counter", "0", value_qualification, "counter is 0"),
+            (
+                "+",
+                "accepts Number, Number",
+                operator_qualification,
+                "+ accepts Number, Number",
+            ),
+            ("counter + 1", "1", revision_qualification, "counter + 1 is 1"),
+            ("counter", "1", revision_qualification, "counter is 1"),
+        ],
     )
 
     disparity = Disparity(
@@ -344,8 +339,7 @@ def build_counter_revision_demo_program() -> Program:
         ],
         note="counter is 0 to counter is 1",
     )
-    program = Program(name="counter-revision-demo", concept=concept)
-    return append_revision(program, revision)
+    return _make_program("counter-revision-demo", concept, revision)
 
 
 def build_file_write_demo_program() -> Program:
@@ -356,96 +350,64 @@ def build_file_write_demo_program() -> Program:
         source="dicta demo",
         note="hard-coded file write effect",
     )
-    purpose = Purpose(statement="persist text to file", mode="demo")
-    concept = Concept(name="file-write-demo", purpose=purpose)
+    concept, purpose = _make_concept("file-write-demo", "persist text to file")
 
-    input_qualification = Qualification(
+    input_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded write input",
         conditions=["demo input"],
         timing="before effect",
     )
-    operation_qualification = Qualification(
+    operation_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="file write effect contract",
         conditions=["FilePath", "Text"],
         timing="before effect",
     )
-    permission_qualification = Qualification(
+    permission_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="demo permission grant",
         conditions=["report.txt"],
         timing="before effect",
     )
-    effect_qualification = Qualification(
+    effect_qualification = _make_qualification(
         strength=QualificationStrength.TESTED,
         basis="accepted write effect",
         conditions=["Permission qualifies for report.txt"],
         timing="after effect",
     )
 
-    add_dictum(
+    _add_dicta(
         concept,
-        produce_dictum(
-            "report.txt",
-            "FilePath",
-            input_qualification,
-            {"display": "report.txt is FilePath"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            '"hello"',
-            "Text",
-            input_qualification,
-            {"display": '"hello" is Text'},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "write",
-            "accepts FilePath, Text",
-            operation_qualification,
-            {"display": "write accepts FilePath, Text"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "write",
-            "changes Disk",
-            operation_qualification,
-            {"display": "write changes Disk"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "write",
-            "requires Permission",
-            operation_qualification,
-            {"display": "write requires Permission"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "Permission",
-            "qualifies for report.txt",
-            permission_qualification,
-            {"display": "Permission qualifies for report.txt"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "report.txt",
-            'contains "hello"',
-            effect_qualification,
-            {"display": 'report.txt contains "hello"'},
-        ),
+        [
+            ("report.txt", "FilePath", input_qualification, "report.txt is FilePath"),
+            ('"hello"', "Text", input_qualification, '"hello" is Text'),
+            (
+                "write",
+                "accepts FilePath, Text",
+                operation_qualification,
+                "write accepts FilePath, Text",
+            ),
+            ("write", "changes Disk", operation_qualification, "write changes Disk"),
+            (
+                "write",
+                "requires Permission",
+                operation_qualification,
+                "write requires Permission",
+            ),
+            (
+                "Permission",
+                "qualifies for report.txt",
+                permission_qualification,
+                "Permission qualifies for report.txt",
+            ),
+            (
+                "report.txt",
+                'contains "hello"',
+                effect_qualification,
+                'report.txt contains "hello"',
+            ),
+        ],
     )
 
     disparity = Disparity(
@@ -473,8 +435,7 @@ def build_file_write_demo_program() -> Program:
         ],
         note="Disk changed by write",
     )
-    program = Program(name="file-write-demo", concept=concept)
-    return append_revision(program, revision)
+    return _make_program("file-write-demo", concept, revision)
 
 
 def build_refused_file_write_demo_program() -> Program:
@@ -485,81 +446,60 @@ def build_refused_file_write_demo_program() -> Program:
         source="dicta demo",
         note="hard-coded refused file write effect",
     )
-    purpose = Purpose(statement="persist text to file", mode="demo")
-    concept = Concept(name="refused-file-write-demo", purpose=purpose)
+    concept, purpose = _make_concept(
+        "refused-file-write-demo",
+        "persist text to file",
+    )
 
-    input_qualification = Qualification(
+    input_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded write input",
         conditions=["demo input"],
         timing="before refusal",
     )
-    operation_qualification = Qualification(
+    operation_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="file write effect contract",
         conditions=["FilePath", "Text"],
         timing="before refusal",
     )
-    permission_qualification = Qualification(
+    permission_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="demo permission denial",
         conditions=["protected/report.txt"],
         timing="before refusal",
     )
 
-    add_dictum(
+    _add_dicta(
         concept,
-        produce_dictum(
-            "protected/report.txt",
-            "FilePath",
-            input_qualification,
-            {"display": "protected/report.txt is FilePath"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            '"hello"',
-            "Text",
-            input_qualification,
-            {"display": '"hello" is Text'},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "write",
-            "accepts FilePath, Text",
-            operation_qualification,
-            {"display": "write accepts FilePath, Text"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "write",
-            "changes Disk",
-            operation_qualification,
-            {"display": "write changes Disk"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "write",
-            "requires Permission",
-            operation_qualification,
-            {"display": "write requires Permission"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "Permission",
-            "does not qualify for protected/report.txt",
-            permission_qualification,
-            {"display": "Permission does not qualify for protected/report.txt"},
-        ),
+        [
+            (
+                "protected/report.txt",
+                "FilePath",
+                input_qualification,
+                "protected/report.txt is FilePath",
+            ),
+            ('"hello"', "Text", input_qualification, '"hello" is Text'),
+            (
+                "write",
+                "accepts FilePath, Text",
+                operation_qualification,
+                "write accepts FilePath, Text",
+            ),
+            ("write", "changes Disk", operation_qualification, "write changes Disk"),
+            (
+                "write",
+                "requires Permission",
+                operation_qualification,
+                "write requires Permission",
+            ),
+            (
+                "Permission",
+                "does not qualify for protected/report.txt",
+                permission_qualification,
+                "Permission does not qualify for protected/report.txt",
+            ),
+        ],
     )
 
     disparity = Disparity(
@@ -587,8 +527,7 @@ def build_refused_file_write_demo_program() -> Program:
         ],
         note="denied write attempt; Disk unchanged",
     )
-    program = Program(name="refused-file-write-demo", concept=concept)
-    return append_revision(program, revision)
+    return _make_program("refused-file-write-demo", concept, revision)
 
 
 def build_supervised_worker_demo_program() -> Program:
@@ -599,114 +538,74 @@ def build_supervised_worker_demo_program() -> Program:
         source="dicta demo",
         note="hard-coded supervised worker failure",
     )
-    purpose = Purpose(statement="keep worker available", mode="demo")
-    concept = Concept(name="supervised-worker-demo", purpose=purpose)
+    concept, purpose = _make_concept(
+        "supervised-worker-demo",
+        "keep worker available",
+    )
 
-    worker_qualification = Qualification(
+    worker_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="supervisor concept",
         conditions=["demo input"],
         timing="before crash",
     )
-    supervision_qualification = Qualification(
+    supervision_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="availability purpose",
         conditions=["worker"],
         timing="before crash",
     )
-    failure_qualification = Qualification(
+    failure_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="observed child outcome",
         conditions=["worker Outcome"],
         timing="after crash",
     )
-    restart_qualification = Qualification(
+    restart_qualification = _make_qualification(
         strength=QualificationStrength.TESTED,
         basis="known-good worker Concept",
         conditions=["worker is Program", "known-good worker Concept exists"],
         timing="after restart",
     )
 
-    add_dictum(
+    _add_dicta(
         concept,
-        produce_dictum(
-            "worker",
-            "Program",
-            worker_qualification,
-            {"display": "worker is Program"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "worker",
-            "Alive",
-            worker_qualification,
-            {"display": "worker is Alive"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "worker",
-            "serves background task",
-            worker_qualification,
-            {"display": "worker serves background task"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "supervisor",
-            "requires worker Alive",
-            supervision_qualification,
-            {"display": "supervisor requires worker Alive"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "worker Outcome",
-            "crash",
-            failure_qualification,
-            {"display": "worker Outcome is crash"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "worker",
-            "not Alive",
-            failure_qualification,
-            {"display": "worker is not Alive"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "known-good worker Concept",
-            "exists",
-            supervision_qualification,
-            {"display": "known-good worker Concept exists"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "worker restart",
-            "accepted",
-            restart_qualification,
-            {"display": "worker restart accepted"},
-        ),
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            "worker",
-            "Alive",
-            restart_qualification,
-            {"display": "worker is Alive"},
-        ),
+        [
+            ("worker", "Program", worker_qualification, "worker is Program"),
+            ("worker", "Alive", worker_qualification, "worker is Alive"),
+            (
+                "worker",
+                "serves background task",
+                worker_qualification,
+                "worker serves background task",
+            ),
+            (
+                "supervisor",
+                "requires worker Alive",
+                supervision_qualification,
+                "supervisor requires worker Alive",
+            ),
+            (
+                "worker Outcome",
+                "crash",
+                failure_qualification,
+                "worker Outcome is crash",
+            ),
+            ("worker", "not Alive", failure_qualification, "worker is not Alive"),
+            (
+                "known-good worker Concept",
+                "exists",
+                supervision_qualification,
+                "known-good worker Concept exists",
+            ),
+            (
+                "worker restart",
+                "accepted",
+                restart_qualification,
+                "worker restart accepted",
+            ),
+            ("worker", "Alive", restart_qualification, "worker is Alive"),
+        ],
     )
 
     disparity = Disparity(
@@ -735,5 +634,4 @@ def build_supervised_worker_demo_program() -> Program:
         ],
         note="worker restarted; restores worker is Alive",
     )
-    program = Program(name="supervisor-demo", concept=concept)
-    return append_revision(program, revision)
+    return _make_program("supervisor-demo", concept, revision)
