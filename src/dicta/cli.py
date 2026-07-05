@@ -9,9 +9,11 @@ from dicta.core.appraise import (
     ArithmeticDatum,
     CounterIncrementDatum,
     FileWriteDatum,
+    WorkerFailureDatum,
     appraise_arithmetic_datum,
     appraise_counter_revision_datum,
     appraise_file_write_datum,
+    appraise_worker_failure_datum,
 )
 from dicta.core.models import Program
 from dicta.core.program import (
@@ -237,6 +239,24 @@ def supervised_worker_demo() -> None:
         build_supervised_worker_demo_program(),
         "worker Outcome is crash",
         show_disparity=True,
+    )
+
+
+@app.command()
+def appraise_supervised_worker_demo() -> None:
+    """Run the mechanically appraised supervised worker failure demo."""
+
+    datum = WorkerFailureDatum(
+        worker_name="worker",
+        failure="crash",
+        known_good_available=True,
+    )
+    _render_demo(
+        appraise_worker_failure_datum(datum),
+        datum.statement_text(),
+        show_purpose=True,
+        show_disparity=True,
+        show_inference=True,
     )
 
 

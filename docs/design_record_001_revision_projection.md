@@ -130,6 +130,19 @@ This proves a world-changing operation can be accepted or refused mechanically
 without performing the real effect. It is still not syntax, not a runtime
 engine, and not actual IO.
 
+## Mechanical Supervision Appraisal
+
+The arithmetic, counter, and file-write appraisers covered evaluation, Revision,
+and effect boundaries.
+
+The supervision appraiser covers Program-to-Program appraisal. A child Program's
+failed Outcome becomes Datum for a parent Program. The parent Program detects
+Disparity, infers restart from a known-good Concept, witnesses the restart
+Outcome, and revises its Concept so the worker is Alive again.
+
+This is still not multiprocessing, not a runtime supervisor, and not a
+state-machine framework.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

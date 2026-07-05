@@ -9,12 +9,15 @@ from dicta.core.appraise import (
     ArithmeticDatum,
     CounterIncrementDatum,
     FileWriteDatum,
+    WorkerFailureDatum,
     appraise_arithmetic_datum,
     appraise_arithmetic_result,
     appraise_counter_revision_datum,
     appraise_counter_revision_result,
     appraise_file_write_datum,
     appraise_file_write_result,
+    appraise_worker_failure_datum,
+    appraise_worker_failure_result,
     classify_value,
     typed_dictum,
 )
@@ -67,6 +70,15 @@ def test_file_write_datum_can_be_constructed() -> None:
     assert datum.statement_text() == 'write report.txt "hello"'
 
 
+def test_worker_failure_datum_can_be_constructed() -> None:
+    datum = WorkerFailureDatum()
+
+    assert datum.worker_name == "worker"
+    assert datum.failure == "crash"
+    assert datum.known_good_available is True
+    assert datum.statement_text() == "worker Outcome is crash"
+
+
 def test_classify_value_identifies_number() -> None:
     assert classify_value(3) == "Number"
 
@@ -111,6 +123,12 @@ def test_appraise_file_write_result_returns_appraisal_result() -> None:
     assert isinstance(result, AppraisalResult)
 
 
+def test_appraise_worker_failure_result_returns_appraisal_result() -> None:
+    result = appraise_worker_failure_result(WorkerFailureDatum())
+
+    assert isinstance(result, AppraisalResult)
+
+
 def test_valid_arithmetic_result_is_accepted() -> None:
     result = appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -131,6 +149,13 @@ def test_file_write_result_is_accepted() -> None:
     result = appraise_file_write_result(
         FileWriteDatum(path="report.txt", content="hello")
     )
+
+    assert result.accepted is True
+    assert "accepted" in result.summary
+
+
+def test_worker_failure_result_is_recovery_accepted() -> None:
+    result = appraise_worker_failure_result(WorkerFailureDatum())
 
     assert result.accepted is True
     assert "accepted" in result.summary
@@ -215,6 +240,12 @@ def test_appraise_file_write_datum_returns_program() -> None:
     assert isinstance(program, Program)
 
 
+def test_appraise_worker_failure_datum_returns_program() -> None:
+    program = appraise_worker_failure_datum(WorkerFailureDatum())
+
+    assert isinstance(program, Program)
+
+
 def test_appraised_arithmetic_program_contains_visible_result() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -276,6 +307,68 @@ def test_appraised_file_write_final_concept_contains_written_content() -> None:
     )
 
     assert has_dictum_text(program, 'report.txt contains "hello"')
+
+
+def test_appraised_worker_failure_contains_worker_program() -> None:
+    program = appraise_worker_failure_datum(WorkerFailureDatum())
+
+    assert has_dictum_text(program, "worker is Program")
+
+
+def test_appraised_worker_failure_contains_supervisor_requirement() -> None:
+    program = appraise_worker_failure_datum(WorkerFailureDatum())
+
+    assert has_dictum_text(program, "supervisor requires worker Alive")
+
+
+def test_appraised_worker_failure_contains_disparity() -> None:
+    result = appraise_worker_failure_result(WorkerFailureDatum())
+
+    assert result.disparity is not None
+    assert result.disparity.description == (
+        "worker is not Alive under availability Purpose"
+    )
+    assert result.disparity.kind == "worker_unavailable"
+
+
+def test_appraised_worker_failure_outcome_records_restart() -> None:
+    result = appraise_worker_failure_result(WorkerFailureDatum())
+
+    assert result.outcome is not None
+    assert result.outcome.result == "worker restarted"
+
+
+def test_appraised_worker_failure_revision_records_restart() -> None:
+    result = appraise_worker_failure_result(WorkerFailureDatum())
+
+    assert result.revision is not None
+    revision_text = " ".join([*result.revision.changes, result.revision.note or ""])
+    assert "worker restarted" in revision_text
+
+
+def test_appraised_worker_failure_final_concept_contains_alive() -> None:
+    program = appraise_worker_failure_datum(WorkerFailureDatum())
+
+    assert has_dictum_text(program, "worker is Alive")
+
+
+def test_appraised_worker_failure_final_concept_removes_not_alive() -> None:
+    program = appraise_worker_failure_datum(WorkerFailureDatum())
+
+    assert not any(
+        dictum.subject == "worker" and dictum.meaning == "not Alive"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_appraised_worker_failure_disparity_snapshot_contains_not_alive() -> None:
+    result = appraise_worker_failure_result(WorkerFailureDatum())
+
+    assert result.disparity is not None
+    assert any(
+        dictum.subject == "worker" and dictum.meaning == "not Alive"
+        for dictum in result.disparity.concept.dicta
+    )
 
 
 def test_appraised_refused_file_write_contains_denied_permission() -> None:
@@ -558,6 +651,21 @@ def test_appraise_refused_file_write_cli_renders_expected_visible_text() -> None
     assert "* Permission does not qualify for protected/report.txt" in result.output
     assert "* write lacks Permission for protected/report.txt" in result.output
     assert "* write refused" in result.output
+
+
+def test_appraise_supervised_worker_cli_renders_expected_visible_text() -> None:
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["appraise-supervised-worker-demo"])
+
+    assert result.exit_code == 0
+    assert "Datum: worker Outcome is crash" in result.output
+    assert "* worker is Program" in result.output
+    assert "* supervisor requires worker Alive" in result.output
+    assert "* worker is not Alive under availability Purpose" in result.output
+    assert "* restart worker from known-good Concept" in result.output
+    assert "* worker restarted" in result.output
+    assert "* Concept restores worker is Alive" in result.output
 
 
 def test_file_write_appraiser_does_not_create_real_files(

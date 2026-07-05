@@ -73,6 +73,21 @@ class FileWriteDatum(BaseModel):
         return f"write {self.path} {_operand_text(self.content)}"
 
 
+class WorkerFailureDatum(BaseModel):
+    """Structured supervised worker failure datum, not a real process."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    worker_name: str = "worker"
+    failure: str = "crash"
+    known_good_available: bool = True
+
+    def statement_text(self) -> str:
+        """Return the visible worker failure statement."""
+
+        return f"{self.worker_name} Outcome is {self.failure}"
+
+
 class AppraisalResult(BaseModel):
     """Mechanical appraiser status plus resulting Program."""
 
@@ -487,6 +502,92 @@ def _appraise_refused_file_write(
     )
 
 
+def _appraise_worker_restart(
+    datum: WorkerFailureDatum,
+    concept: Concept,
+    purpose: Purpose,
+) -> AppraisalResult:
+    restart_qualification = checked(
+        basis="known-good worker Concept",
+        conditions=(
+            f"{datum.worker_name} is Program",
+            "known-good worker Concept exists",
+        ),
+        timing="after restart",
+    )
+    received = receive_datum(
+        datum,
+        source="dicta appraise-supervised-worker-demo",
+        note="structured worker failure datum",
+    )
+    disparity = Disparity(
+        datum=received,
+        concept=concept,
+        purpose=purpose,
+        description=f"{datum.worker_name} is not Alive under availability Purpose",
+        severity="recovering",
+        kind="worker_unavailable",
+        tags=(datum.worker_name, "supervision"),
+    )
+
+    _remove_dictum(concept, datum.worker_name, "not Alive")
+    add_dictum(
+        concept,
+        produce_dictum(
+            f"{datum.worker_name} restart",
+            "accepted",
+            restart_qualification,
+            display=f"{datum.worker_name} restart accepted",
+            kind="supervision",
+            tags=(datum.worker_name, "supervision"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.worker_name,
+            "Alive",
+            restart_qualification,
+            display=f"{datum.worker_name} is Alive",
+            kind="status",
+            tags=(datum.worker_name, "supervision"),
+        ),
+    )
+
+    inference = Inference(
+        from_disparity=disparity,
+        derived="restart worker from known-good Concept",
+        basis=f"supervisor requires {datum.worker_name} Alive",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="worker restarted",
+        status="restarted",
+        kind="restart",
+        tags=(datum.worker_name, "supervision"),
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept records worker crash",
+            "Concept records worker restarted",
+            "Concept restores worker is Alive",
+        ],
+        note="worker restarted; restores worker is Alive",
+        kind="restore_state",
+        tags=(datum.worker_name, "supervision"),
+    )
+    return _accepted_result(
+        datum=datum,
+        concept=concept,
+        revision=revision,
+        program_name="mechanical-supervised-worker-appraisal",
+        summary="worker restart accepted",
+        disparity=disparity,
+        outcome=outcome,
+    )
+
+
 def _appraise_refused_counter_revision(
     datum: CounterIncrementDatum,
     concept: Concept,
@@ -887,3 +988,113 @@ def appraise_file_write_datum(datum: FileWriteDatum) -> Program:
     """Appraise one structured file write datum into a Dicta Program."""
 
     return appraise_file_write_result(datum).program
+
+
+def appraise_worker_failure_result(datum: WorkerFailureDatum) -> AppraisalResult:
+    """Appraise one structured worker failure into a result shape."""
+
+    if not datum.known_good_available:
+        msg = "worker failure without known-good Concept is not implemented yet"
+        raise ValueError(msg)
+
+    purpose = Purpose(statement="keep worker available", mode="appraisal")
+    concept = Concept(name="mechanical-supervised-worker-appraisal", purpose=purpose)
+    worker_qualification = checked(
+        basis="supervisor concept",
+        conditions=("structured worker datum",),
+        timing="before crash",
+    )
+    supervision_qualification = asserted(
+        basis="availability purpose",
+        conditions=(datum.worker_name,),
+        timing="before crash",
+    )
+    failure_qualification = checked(
+        basis="observed child outcome",
+        conditions=(f"{datum.worker_name} Outcome",),
+        timing="after crash",
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.worker_name,
+            "Program",
+            worker_qualification,
+            display=f"{datum.worker_name} is Program",
+            kind="type",
+            tags=(datum.worker_name, "program"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.worker_name,
+            "Alive",
+            worker_qualification,
+            display=f"{datum.worker_name} is Alive",
+            kind="status",
+            tags=(datum.worker_name, "supervision"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.worker_name,
+            "serves background task",
+            worker_qualification,
+            display=f"{datum.worker_name} serves background task",
+            kind="behavior",
+            tags=(datum.worker_name, "supervision"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "supervisor",
+            f"requires {datum.worker_name} Alive",
+            supervision_qualification,
+            display=f"supervisor requires {datum.worker_name} Alive",
+            kind="supervision",
+            tags=("supervisor", datum.worker_name),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            f"{datum.worker_name} Outcome",
+            datum.failure,
+            failure_qualification,
+            display=f"{datum.worker_name} Outcome is {datum.failure}",
+            kind="status",
+            tags=(datum.worker_name, "failure"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.worker_name,
+            "not Alive",
+            failure_qualification,
+            display=f"{datum.worker_name} is not Alive",
+            kind="status",
+            tags=(datum.worker_name, "failure"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            f"known-good {datum.worker_name} Concept",
+            "exists",
+            supervision_qualification,
+            display=f"known-good {datum.worker_name} Concept exists",
+            kind="supervision",
+            tags=(datum.worker_name, "supervision"),
+        ),
+    )
+    return _appraise_worker_restart(datum, concept, purpose)
+
+
+def appraise_worker_failure_datum(datum: WorkerFailureDatum) -> Program:
+    """Appraise one structured worker failure into a Dicta Program."""
+
+    return appraise_worker_failure_result(datum).program

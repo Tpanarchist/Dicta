@@ -20,6 +20,7 @@ def test_current_cli_commands_run() -> None:
         "refused-file-write-demo",
         "appraise-refused-file-write-demo",
         "supervised-worker-demo",
+        "appraise-supervised-worker-demo",
         "agent-edit-demo",
         "refused-agent-edit-demo",
     ]:
