@@ -9,6 +9,7 @@ from dicta.core.models import (
     Purpose,
     Qualification,
     Revision,
+    RevisionOperation,
 )
 from dicta.core.qualification import (
     QualificationStrength,
@@ -171,3 +172,21 @@ def test_revision_can_carry_kind_and_tags() -> None:
 
     assert revision.kind == "accept_agent_edit"
     assert revision.tags == ("agent", "add_one")
+
+
+def test_revision_can_carry_structured_operations() -> None:
+    outcome = Outcome(inference=_make_inference_with_disparity(), result="counter is 1")
+    operation = RevisionOperation(
+        operation="replace_dictum",
+        subject="counter",
+        from_meaning="0",
+        to_meaning="1",
+    )
+    revision = Revision(
+        outcome=outcome,
+        changes=["Concept replaces counter is 0 with counter is 1"],
+        operations=(operation,),
+    )
+
+    assert revision.operations == (operation,)
+    assert revision.operations[0].operation == "replace_dictum"

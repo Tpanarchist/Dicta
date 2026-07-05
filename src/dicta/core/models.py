@@ -119,6 +119,18 @@ class Outcome(BaseModel):
     tags: tuple[str, ...] = Field(default_factory=tuple)
 
 
+class RevisionOperation(BaseModel):
+    """Structured operation carried by a Revision."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    operation: str
+    subject: str
+    from_meaning: str | None = None
+    to_meaning: str | None = None
+    note: str | None = None
+
+
 class Revision(BaseModel):
     """Appraised change to a Program's Concept after Outcome."""
 
@@ -129,6 +141,7 @@ class Revision(BaseModel):
     note: str | None = None
     kind: str | None = None
     tags: tuple[str, ...] = Field(default_factory=tuple)
+    operations: tuple[RevisionOperation, ...] = Field(default_factory=tuple)
 
 
 class Program(BaseModel):

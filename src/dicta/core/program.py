@@ -16,6 +16,7 @@ from dicta.core.models import (
     Purpose,
     Qualification,
     Revision,
+    RevisionOperation,
 )
 from dicta.core.qualification import QualificationStrength
 
@@ -83,6 +84,7 @@ def create_revision(
     note: str | None = None,
     kind: str | None = None,
     tags: tuple[str, ...] = (),
+    operations: tuple[RevisionOperation, ...] = (),
 ) -> Revision:
     """Create a Revision from an Outcome."""
 
@@ -92,6 +94,7 @@ def create_revision(
         note=note,
         kind=kind,
         tags=tags,
+        operations=operations,
     )
 
 

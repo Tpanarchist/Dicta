@@ -80,6 +80,20 @@ This shape is for future checkers, agents, and CLIs that need to inspect
 acceptance or refusal without unpacking Program history manually. It is still
 not syntax, not lowering, and not a full interpreter.
 
+## Mechanical Counter Revision
+
+The arithmetic appraisers proved mechanical success and refusal.
+
+The counter appraiser proves that structured Datum can produce an applied
+Revision. The final Program Concept is projected from the Revision: it preserves
+`counter is Number`, replaces `counter is 0` with `counter is 1`, and does not
+keep the old current-value Dictum as live Concept state.
+
+The Revision also carries a structured `replace_dictum` operation so future
+checkers can inspect the state change without parsing the prose change note.
+
+This is still not syntax and not a general interpreter.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

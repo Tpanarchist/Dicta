@@ -3,8 +3,11 @@
 from dicta.core.appraise import (
     AppraisalResult,
     ArithmeticDatum,
+    CounterIncrementDatum,
     appraise_arithmetic_datum,
     appraise_arithmetic_result,
+    appraise_counter_revision_datum,
+    appraise_counter_revision_result,
 )
 from dicta.core.models import (
     Concept,
@@ -17,6 +20,7 @@ from dicta.core.models import (
     Purpose,
     Qualification,
     Revision,
+    RevisionOperation,
 )
 from dicta.core.qualification import (
     QualificationStrength,
@@ -48,11 +52,15 @@ __all__ = [
     "Qualification",
     "QualificationStrength",
     "Revision",
+    "RevisionOperation",
     "AppraisalResult",
     "ArithmeticDatum",
+    "CounterIncrementDatum",
     "asserted",
     "appraise_arithmetic_datum",
     "appraise_arithmetic_result",
+    "appraise_counter_revision_datum",
+    "appraise_counter_revision_result",
     "checked",
     "dicta_by_kind",
     "dicta_by_qualification_strength",

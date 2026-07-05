@@ -4,8 +4,11 @@ from dicta.cli import app
 from dicta.core.appraise import (
     AppraisalResult,
     ArithmeticDatum,
+    CounterIncrementDatum,
     appraise_arithmetic_datum,
     appraise_arithmetic_result,
+    appraise_counter_revision_datum,
+    appraise_counter_revision_result,
 )
 from dicta.core.models import Program
 from dicta.core.query import has_dictum_meaning, has_dictum_text
@@ -30,6 +33,15 @@ def test_invalid_arithmetic_datum_can_be_constructed() -> None:
     assert datum.expression_text() == '3 + "cat"'
 
 
+def test_counter_increment_datum_can_be_constructed() -> None:
+    datum = CounterIncrementDatum(name="counter", initial=0)
+
+    assert datum.name == "counter"
+    assert datum.initial == 0
+    assert datum.increment == 1
+    assert datum.statement_text() == "counter = 0; counter = counter + 1"
+
+
 def test_appraise_arithmetic_datum_returns_program() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -42,8 +54,25 @@ def test_appraise_arithmetic_result_returns_appraisal_result() -> None:
     assert isinstance(result, AppraisalResult)
 
 
+def test_appraise_counter_revision_result_returns_appraisal_result() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert isinstance(result, AppraisalResult)
+
+
 def test_valid_arithmetic_result_is_accepted() -> None:
     result = appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert result.accepted is True
+    assert "accepted" in result.summary
+
+
+def test_counter_revision_result_is_accepted() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
 
     assert result.accepted is True
     assert "accepted" in result.summary
@@ -85,6 +114,14 @@ def test_invalid_arithmetic_result_contains_type_mismatch_program() -> None:
     assert result.program.history[-1].outcome.result == "evaluation refused"
 
 
+def test_appraise_counter_revision_datum_returns_program() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert isinstance(program, Program)
+
+
 def test_appraised_arithmetic_program_contains_visible_result() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -95,6 +132,59 @@ def test_appraised_arithmetic_program_contains_result_meaning() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
 
     assert has_dictum_meaning(program, "7")
+
+
+def test_appraised_counter_final_concept_contains_new_value() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert has_dictum_text(program, "counter is 1")
+
+
+def test_appraised_counter_final_concept_preserves_type() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert has_dictum_text(program, "counter is Number")
+
+
+def test_appraised_counter_final_concept_removes_old_current_value() -> None:
+    program = appraise_counter_revision_datum(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert not any(
+        dictum.subject == "counter" and dictum.meaning == "0"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_appraised_counter_disparity_snapshot_contains_old_value() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert result.disparity is not None
+    assert any(
+        dictum.subject == "counter" and dictum.meaning == "0"
+        for dictum in result.disparity.concept.dicta
+    )
+
+
+def test_appraised_counter_revision_has_replace_operation() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert result.revision is not None
+    assert len(result.revision.operations) == 1
+    operation = result.revision.operations[0]
+    assert operation.operation == "replace_dictum"
+    assert operation.subject == "counter"
+    assert operation.from_meaning == "0"
+    assert operation.to_meaning == "1"
 
 
 def test_appraised_arithmetic_result_has_checked_qualification() -> None:
@@ -203,3 +293,16 @@ def test_appraise_invalid_arithmetic_cli_renders_expected_visible_text() -> None
     assert "* + does not qualify for Number, Text" in result.output
     assert "* evaluation refused" in result.output
     assert "arithmetic expression refused" not in result.output
+
+
+def test_appraise_counter_cli_renders_expected_visible_text() -> None:
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["appraise-counter-demo"])
+
+    assert result.exit_code == 0
+    assert "Datum: counter = 0; counter = counter + 1" in result.output
+    assert "* counter is Number" in result.output
+    assert "* counter is 1" in result.output
+    assert "* counter may revise from 0 to 1" in result.output
+    assert "* Concept replaces counter is 0 with counter is 1" in result.output

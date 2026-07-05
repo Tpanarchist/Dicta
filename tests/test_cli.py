@@ -13,6 +13,7 @@ def test_current_cli_commands_run() -> None:
         "appraise-invalid-arithmetic-demo",
         "invalid-demo",
         "counter-demo",
+        "appraise-counter-demo",
         "file-write-demo",
         "refused-file-write-demo",
         "supervised-worker-demo",

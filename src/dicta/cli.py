@@ -5,7 +5,12 @@ from importlib.metadata import PackageNotFoundError, version as metadata_version
 import typer
 
 from dicta import __version__
-from dicta.core.appraise import ArithmeticDatum, appraise_arithmetic_datum
+from dicta.core.appraise import (
+    ArithmeticDatum,
+    CounterIncrementDatum,
+    appraise_arithmetic_datum,
+    appraise_counter_revision_datum,
+)
 from dicta.core.models import Program
 from dicta.core.program import (
     build_agent_edit_demo_program,
@@ -146,6 +151,20 @@ def counter_demo() -> None:
     _render_demo(
         build_counter_revision_demo_program(),
         "counter = 0; counter = counter + 1",
+    )
+
+
+@app.command()
+def appraise_counter_demo() -> None:
+    """Run the mechanically appraised structured counter revision demo."""
+
+    datum = CounterIncrementDatum(name="counter", initial=0, increment=1)
+    _render_demo(
+        appraise_counter_revision_datum(datum),
+        datum.statement_text(),
+        show_qualification=True,
+        show_purpose=True,
+        show_inference=True,
     )
 
 

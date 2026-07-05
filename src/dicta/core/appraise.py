@@ -12,6 +12,7 @@ from dicta.core.models import (
     Program,
     Purpose,
     Revision,
+    RevisionOperation,
 )
 from dicta.core.program import (
     add_dictum,
@@ -37,6 +38,24 @@ class ArithmeticDatum(BaseModel):
         """Return the visible arithmetic expression."""
 
         return f"{_operand_text(self.left)} {self.operator} {_operand_text(self.right)}"
+
+
+class CounterIncrementDatum(BaseModel):
+    """Structured counter increment datum, not source syntax."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    initial: int
+    increment: int = 1
+
+    def statement_text(self) -> str:
+        """Return the visible counter revision statement."""
+
+        return (
+            f"{self.name} = {self.initial}; "
+            f"{self.name} = {self.name} + {self.increment}"
+        )
 
 
 class AppraisalResult(BaseModel):
@@ -138,6 +157,14 @@ def _find_number_dictum(concept: Concept, value: int) -> bool:
         dictum.subject == str(value) and dictum.meaning == "Number"
         for dictum in concept.dicta
     )
+
+
+def _remove_dictum(concept: Concept, subject: str, meaning: str) -> None:
+    concept.dicta = [
+        dictum
+        for dictum in concept.dicta
+        if not (dictum.subject == subject and dictum.meaning == meaning)
+    ]
 
 
 def _appraise_integer_addition(
@@ -311,3 +338,161 @@ def appraise_arithmetic_datum(datum: ArithmeticDatum) -> Program:
     """Appraise one structured arithmetic datum into a Dicta Program."""
 
     return appraise_arithmetic_result(datum).program
+
+
+def appraise_counter_revision_result(
+    datum: CounterIncrementDatum,
+) -> AppraisalResult:
+    """Appraise one structured counter revision into a result shape."""
+
+    if datum.increment != 1:
+        msg = "only increment by 1 is supported by the first counter appraiser"
+        raise ValueError(msg)
+
+    purpose = Purpose(statement="revise counter by valid increment", mode="appraisal")
+    concept = Concept(name="mechanical-counter-revision-appraisal", purpose=purpose)
+    type_qualification = checked(
+        basis="counter binding",
+        conditions=("structured counter datum",),
+        timing="before revision",
+    )
+    value_qualification = checked(
+        basis="counter state",
+        conditions=("structured counter datum",),
+        timing="before revision",
+    )
+    operator_qualification = asserted(
+        basis="arithmetic concept",
+        conditions=("Number operands",),
+        timing="during revision",
+    )
+    revision_qualification = checked(
+        basis="mechanical counter increment",
+        conditions=(f"{datum.name} is Number", f"{datum.name} is {datum.initial}"),
+        timing="after revision",
+    )
+
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.name,
+            "Number",
+            type_qualification,
+            display=f"{datum.name} is Number",
+            kind="type",
+            tags=("counter", "number"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.name,
+            str(datum.initial),
+            value_qualification,
+            display=f"{datum.name} is {datum.initial}",
+            kind="value",
+            tags=("counter",),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "+",
+            "accepts Number, Number",
+            operator_qualification,
+            display="+ accepts Number, Number",
+            kind="operation",
+            tags=("counter", "arithmetic"),
+        ),
+    )
+
+    revised_value = datum.initial + datum.increment
+    received = receive_datum(
+        datum,
+        source="dicta appraise-counter-demo",
+        note="structured counter revision datum",
+    )
+    disparity = Disparity(
+        datum=received,
+        concept=concept,
+        purpose=purpose,
+        description=f"{datum.name} is {datum.initial} before valid increment",
+        severity="revision",
+        kind="current_value_revision",
+        tags=("counter",),
+    )
+
+    _remove_dictum(concept, datum.name, str(datum.initial))
+    add_dictum(
+        concept,
+        produce_dictum(
+            f"{datum.name} + {datum.increment}",
+            str(revised_value),
+            revision_qualification,
+            display=f"{datum.name} + {datum.increment} is {revised_value}",
+            kind="value",
+            tags=("counter", "arithmetic"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.name,
+            str(revised_value),
+            revision_qualification,
+            display=f"{datum.name} is {revised_value}",
+            kind="value",
+            tags=("counter",),
+        ),
+    )
+
+    inference = Inference(
+        from_disparity=disparity,
+        derived=f"{datum.name} may revise from {datum.initial} to {revised_value}",
+        basis=f"{datum.name} is Number and + accepts Number, Number",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result=f"{datum.name} is {revised_value}",
+        status="revised",
+        kind="value",
+        tags=("counter",),
+    )
+    operation = RevisionOperation(
+        operation="replace_dictum",
+        subject=datum.name,
+        from_meaning=str(datum.initial),
+        to_meaning=str(revised_value),
+        note=f"{datum.name} current value revised",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            f"Concept replaces {datum.name} is {datum.initial} "
+            f"with {datum.name} is {revised_value}",
+            f"Concept preserves {datum.name} is Number",
+        ],
+        note=f"{datum.name} is {datum.initial} to {datum.name} is {revised_value}",
+        kind="replace_value",
+        tags=("counter",),
+        operations=(operation,),
+    )
+    program = append_revision(
+        Program(name="mechanical-counter-revision-appraisal", concept=concept),
+        revision,
+    )
+    return AppraisalResult(
+        datum=datum,
+        program=program,
+        accepted=True,
+        summary="counter revision accepted",
+        disparity=disparity,
+        outcome=outcome,
+        revision=revision,
+    )
+
+
+def appraise_counter_revision_datum(datum: CounterIncrementDatum) -> Program:
+    """Appraise one structured counter revision into a Dicta Program."""
+
+    return appraise_counter_revision_result(datum).program
