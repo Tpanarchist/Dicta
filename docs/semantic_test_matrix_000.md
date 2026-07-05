@@ -38,6 +38,15 @@ A Program carries the whole motion forward.
 | AI agent edit accepted | `dicta agent-edit-demo` | agent proposes behavior-preserving edit | Agent output enters as Datum and becomes accepted Revision only after Qualification. |
 | AI agent edit refused | `dicta refused-agent-edit-demo` | agent proposes behavior-changing edit | Agent output can be refused when it violates Purpose or fails Qualification. |
 
+## Golden Equivalence
+
+The original demos are semantic fixtures.
+
+Mechanical appraisers are now tested against those fixtures by comparing
+semantic commitments rather than raw object dumps.
+
+This keeps the semantic layer stable while implementation details improve.
+
 ## Design Conclusion
 
 The first Dicta scaffold proves that the semantic chain can represent success,
