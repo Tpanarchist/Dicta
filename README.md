@@ -26,6 +26,7 @@ Datum -> Dictum -> Qualification -> Concept -> Purpose -> Disparity -> Inference
 
 - [Foundation design record](docs/design_record_000_foundation.md)
 - [Revision projection design record](docs/design_record_001_revision_projection.md)
+- [Appraiser/syntax boundary design record](docs/design_record_002_appraiser_syntax_boundary.md)
 - [Semantic test matrix](docs/semantic_test_matrix_000.md)
 
 ## Not in scope yet
