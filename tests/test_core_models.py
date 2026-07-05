@@ -10,7 +10,13 @@ from dicta.core.models import (
     Qualification,
     Revision,
 )
-from dicta.core.qualification import QualificationStrength
+from dicta.core.qualification import (
+    QualificationStrength,
+    asserted as make_asserted,
+    checked as make_checked,
+    proved as make_proved,
+    tested as make_tested,
+)
 
 
 def _make_inference_with_disparity(
@@ -42,6 +48,23 @@ def test_qualification_can_be_created() -> None:
 
     assert qualification.strength == QualificationStrength.ASSERTED
     assert qualification.basis == "given"
+    assert qualification.conditions == ("demo",)
+    assert qualification.timing == "now"
+
+
+def test_qualification_defaults_record_author_time() -> None:
+    qualification = Qualification()
+
+    assert qualification.strength == QualificationStrength.ASSERTED
+    assert qualification.conditions == ()
+    assert qualification.timing == "author-time"
+
+
+def test_qualification_constructors_create_expected_strengths() -> None:
+    assert make_asserted().strength == QualificationStrength.ASSERTED
+    assert make_tested().strength == QualificationStrength.TESTED
+    assert make_checked().strength == QualificationStrength.CHECKED
+    assert make_proved().strength == QualificationStrength.PROVED
 
 
 def test_dictum_can_hold_qualification() -> None:

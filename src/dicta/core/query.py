@@ -1,6 +1,7 @@
 """Small semantic inspection helpers for Dicta Programs."""
 
 from dicta.core.models import Dictum, Disparity, Outcome, Program, Revision
+from dicta.core.qualification import QualificationStrength
 
 
 def _visible_dictum_text(dictum: Dictum) -> str:
@@ -20,6 +21,18 @@ def dicta_with_tag(program: Program, tag: str) -> tuple[Dictum, ...]:
     """Return Dicta in the Program Concept whose tags contain tag."""
 
     return tuple(dictum for dictum in program.concept.dicta if tag in dictum.tags)
+
+
+def dicta_by_qualification_strength(
+    program: Program,
+    strength: QualificationStrength | str,
+) -> tuple[Dictum, ...]:
+    """Return Dicta whose Qualification strength matches strength."""
+
+    target = QualificationStrength(strength)
+    return tuple(
+        dictum for dictum in program.concept.dicta if dictum.qualification.strength == target
+    )
 
 
 def has_dictum_meaning(program: Program, meaning: str) -> bool:

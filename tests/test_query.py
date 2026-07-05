@@ -7,12 +7,14 @@ from dicta.core.program import (
 )
 from dicta.core.query import (
     dicta_by_kind,
+    dicta_by_qualification_strength,
     dicta_with_tag,
     disparities_by_kind,
     has_dictum_meaning,
     outcomes_by_kind,
     revisions_by_kind,
 )
+from dicta.core.qualification import QualificationStrength
 
 
 def test_dicta_by_kind_finds_effect_dicta() -> None:
@@ -41,6 +43,22 @@ def test_dicta_with_tag_finds_tagged_dictum() -> None:
     dicta = dicta_with_tag(program, "disk")
 
     assert any(dictum.kind == "effect" for dictum in dicta)
+
+
+def test_dicta_by_qualification_strength_finds_checked_dicta() -> None:
+    program = build_file_write_demo_program()
+
+    dicta = dicta_by_qualification_strength(program, QualificationStrength.CHECKED)
+
+    assert any(dictum.subject == "Permission" for dictum in dicta)
+
+
+def test_dicta_by_qualification_strength_accepts_string_value() -> None:
+    program = build_file_write_demo_program()
+
+    dicta = dicta_by_qualification_strength(program, "checked")
+
+    assert any(dictum.subject == "Permission" for dictum in dicta)
 
 
 def test_has_dictum_meaning_finds_visible_meaning() -> None:

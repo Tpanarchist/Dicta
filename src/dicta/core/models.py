@@ -26,8 +26,8 @@ class Qualification(BaseModel):
 
     strength: QualificationStrength = Field(default=QualificationStrength.ASSERTED)
     basis: str = Field(default="")
-    conditions: list[str] = Field(default_factory=list)
-    timing: str | None = Field(default=None)
+    conditions: tuple[str, ...] = Field(default_factory=tuple)
+    timing: str = Field(default="author-time")
 
 
 class Dictum(BaseModel):

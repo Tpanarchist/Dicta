@@ -113,7 +113,7 @@ def dictum_text(dictum: Dictum) -> str:
 def _make_qualification(
     strength: QualificationStrength,
     basis: str,
-    conditions: list[str],
+    conditions: tuple[str, ...],
     timing: str,
 ) -> Qualification:
     return Qualification(
@@ -181,20 +181,20 @@ def build_arithmetic_demo_program() -> Program:
     literal_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded literal recognition",
-        conditions=["demo input"],
-        timing="demo",
+        conditions=("demo input",),
+        timing="demo-time",
     )
     operator_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
-        basis="arithmetic convention",
-        conditions=["demo input"],
-        timing="demo",
+        basis="arithmetic concept",
+        conditions=("Number operands",),
+        timing="demo-time",
     )
     result_qualification = _make_qualification(
-        strength=QualificationStrength.TESTED,
-        basis="evaluation",
-        conditions=["integer addition"],
-        timing="demo",
+        strength=QualificationStrength.CHECKED,
+        basis="hard-coded arithmetic evaluation",
+        conditions=("Number operands",),
+        timing="demo-time",
     )
 
     _add_dicta(
@@ -257,14 +257,14 @@ def build_invalid_arithmetic_demo_program() -> Program:
     literal_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded literal recognition",
-        conditions=["demo input"],
-        timing="demo",
+        conditions=("demo input",),
+        timing="demo-time",
     )
     operator_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
-        basis="arithmetic convention",
-        conditions=["demo input"],
-        timing="demo",
+        basis="arithmetic concept",
+        conditions=("Number operands",),
+        timing="demo-time",
     )
 
     _add_dicta(
@@ -328,25 +328,25 @@ def build_counter_revision_demo_program() -> Program:
     type_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="counter binding",
-        conditions=["demo input"],
+        conditions=("demo input",),
         timing="before revision",
     )
     value_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="counter state",
-        conditions=["demo input"],
+        conditions=("demo input",),
         timing="before revision",
     )
     operator_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="arithmetic convention",
-        conditions=["Number, Number"],
+        conditions=("Number, Number",),
         timing="during revision",
     )
     revision_qualification = _make_qualification(
         strength=QualificationStrength.TESTED,
         basis="valid increment",
-        conditions=["counter is Number", "counter is 0"],
+        conditions=("counter is Number", "counter is 0"),
         timing="after revision",
     )
 
@@ -411,25 +411,25 @@ def build_file_write_demo_program() -> Program:
     input_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded write input",
-        conditions=["demo input"],
+        conditions=("demo input",),
         timing="before effect",
     )
     operation_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="file write effect contract",
-        conditions=["FilePath", "Text"],
+        conditions=("FilePath", "Text"),
         timing="before effect",
     )
     permission_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
-        basis="demo permission grant",
-        conditions=["report.txt"],
-        timing="before effect",
+        basis="demo permission policy",
+        conditions=("target is report.txt",),
+        timing="demo-time",
     )
     effect_qualification = _make_qualification(
         strength=QualificationStrength.TESTED,
         basis="accepted write effect",
-        conditions=["Permission qualifies for report.txt"],
+        conditions=("Permission qualifies for report.txt",),
         timing="after effect",
     )
 
@@ -527,20 +527,20 @@ def build_refused_file_write_demo_program() -> Program:
     input_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="hard-coded write input",
-        conditions=["demo input"],
+        conditions=("demo input",),
         timing="before refusal",
     )
     operation_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="file write effect contract",
-        conditions=["FilePath", "Text"],
+        conditions=("FilePath", "Text"),
         timing="before refusal",
     )
     permission_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
-        basis="demo permission denial",
-        conditions=["protected/report.txt"],
-        timing="before refusal",
+        basis="demo permission policy",
+        conditions=("target is protected/report.txt",),
+        timing="demo-time",
     )
 
     _add_dicta(
@@ -636,25 +636,25 @@ def build_supervised_worker_demo_program() -> Program:
     worker_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="supervisor concept",
-        conditions=["demo input"],
+        conditions=("demo input",),
         timing="before crash",
     )
     supervision_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="availability purpose",
-        conditions=["worker"],
+        conditions=("worker",),
         timing="before crash",
     )
     failure_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="observed child outcome",
-        conditions=["worker Outcome"],
+        conditions=("worker Outcome",),
         timing="after crash",
     )
     restart_qualification = _make_qualification(
         strength=QualificationStrength.TESTED,
         basis="known-good worker Concept",
-        conditions=["worker is Program", "known-good worker Concept exists"],
+        conditions=("worker is Program", "known-good worker Concept exists"),
         timing="after restart",
     )
 
@@ -749,26 +749,26 @@ def build_agent_edit_demo_program() -> Program:
     proposal_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="agent proposal",
-        conditions=["untrusted input"],
+        conditions=("untrusted input",),
         timing="before appraisal",
     )
     behavior_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="add_one contract",
-        conditions=["Number"],
+        conditions=("Number",),
         timing="during appraisal",
     )
     equivalence_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="commutative addition for Number",
-        conditions=["x is Number"],
+        conditions=("x is Number",),
         timing="during appraisal",
     )
     acceptance_qualification = _make_qualification(
-        strength=QualificationStrength.TESTED,
-        basis="checked equivalence",
-        conditions=["x + 1 equals 1 + x for Number"],
-        timing="after appraisal",
+        strength=QualificationStrength.CHECKED,
+        basis="commutativity over Number",
+        conditions=("x is Number",),
+        timing="demo-time",
     )
 
     _add_dicta(
@@ -869,26 +869,26 @@ def build_refused_agent_edit_demo_program() -> Program:
     proposal_qualification = _make_qualification(
         strength=QualificationStrength.ASSERTED,
         basis="agent proposal",
-        conditions=["untrusted input"],
+        conditions=("untrusted input",),
         timing="before appraisal",
     )
     behavior_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="add_one contract",
-        conditions=["Number"],
+        conditions=("Number",),
         timing="during appraisal",
     )
     disparity_qualification = _make_qualification(
         strength=QualificationStrength.CHECKED,
         basis="checked non-equivalence",
-        conditions=["x is Number"],
+        conditions=("x is Number",),
         timing="during appraisal",
     )
     refusal_qualification = _make_qualification(
-        strength=QualificationStrength.TESTED,
-        basis="checked equivalence failed",
-        conditions=["x + 1 does not equal x + 2 for Number"],
-        timing="after appraisal",
+        strength=QualificationStrength.CHECKED,
+        basis="non-equivalence over Number",
+        conditions=("x is Number",),
+        timing="demo-time",
     )
 
     _add_dicta(

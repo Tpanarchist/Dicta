@@ -9,6 +9,7 @@ from dicta.core.program import (
     build_refused_file_write_demo_program,
     build_supervised_worker_demo_program,
 )
+from dicta.core.qualification import QualificationStrength
 
 
 def test_hard_coded_arithmetic_demo_produces_program() -> None:
@@ -30,6 +31,20 @@ def test_resulting_concept_contains_evaluated_arithmetic_dictum() -> None:
         dictum.subject == "3 + 4" and dictum.meaning == "7"
         for dictum in program.concept.dicta
     )
+
+
+def test_arithmetic_result_has_checked_qualification() -> None:
+    program = build_arithmetic_demo_program()
+    result_dictum = next(
+        dictum
+        for dictum in program.concept.dicta
+        if dictum.subject == "3 + 4" and dictum.meaning == "7"
+    )
+
+    assert result_dictum.qualification.strength == QualificationStrength.CHECKED
+    assert result_dictum.qualification.basis == "hard-coded arithmetic evaluation"
+    assert result_dictum.qualification.conditions == ("Number operands",)
+    assert result_dictum.qualification.timing == "demo-time"
 
 
 def test_demo_represents_full_semantic_chain() -> None:
@@ -156,6 +171,21 @@ def test_file_write_demo_concept_contains_permission_qualification() -> None:
         and dictum.meaning == "qualifies for report.txt"
         for dictum in program.concept.dicta
     )
+
+
+def test_file_write_permission_qualification_has_meaningful_basis() -> None:
+    program = build_file_write_demo_program()
+    permission_dictum = next(
+        dictum
+        for dictum in program.concept.dicta
+        if dictum.subject == "Permission"
+        and dictum.meaning == "qualifies for report.txt"
+    )
+
+    assert permission_dictum.qualification.strength == QualificationStrength.CHECKED
+    assert permission_dictum.qualification.basis == "demo permission policy"
+    assert permission_dictum.qualification.conditions == ("target is report.txt",)
+    assert permission_dictum.qualification.timing == "demo-time"
 
 
 def test_file_write_demo_concept_contains_written_content() -> None:
@@ -441,6 +471,21 @@ def test_refused_agent_edit_demo_concept_contains_failed_equivalence() -> None:
         and dictum.meaning == "does not qualify by checked equivalence"
         for dictum in program.concept.dicta
     )
+
+
+def test_refused_agent_edit_non_equivalence_has_checked_qualification() -> None:
+    program = build_refused_agent_edit_demo_program()
+    refused_dictum = next(
+        dictum
+        for dictum in program.concept.dicta
+        if dictum.subject == "agent edit"
+        and dictum.meaning == "does not qualify by checked equivalence"
+    )
+
+    assert refused_dictum.qualification.strength == QualificationStrength.CHECKED
+    assert refused_dictum.qualification.basis == "non-equivalence over Number"
+    assert refused_dictum.qualification.conditions == ("x is Number",)
+    assert refused_dictum.qualification.timing == "demo-time"
 
 
 def test_refused_agent_edit_demo_disparity_mentions_behavior_violation() -> None:
