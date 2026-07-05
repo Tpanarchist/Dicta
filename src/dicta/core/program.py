@@ -738,3 +738,106 @@ def build_agent_edit_demo_program() -> Program:
         note="agent edit accepted; preserves add_one behavior",
     )
     return _make_program("agent-edit-demo", concept, revision)
+
+
+def build_refused_agent_edit_demo_program() -> Program:
+    """Build the hard-coded representation for refusing an AI edit proposal."""
+
+    datum = receive_datum(
+        "agent proposes: replace add_one(x) = x + 1 with add_one(x) = x + 2",
+        source="dicta demo",
+        note="hard-coded refused AI agent edit proposal",
+    )
+    concept, purpose = _make_concept(
+        "refused-agent-edit-demo",
+        "preserve behavior while improving form",
+    )
+
+    proposal_qualification = _make_qualification(
+        strength=QualificationStrength.ASSERTED,
+        basis="agent proposal",
+        conditions=["untrusted input"],
+        timing="before appraisal",
+    )
+    behavior_qualification = _make_qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="add_one contract",
+        conditions=["Number"],
+        timing="during appraisal",
+    )
+    disparity_qualification = _make_qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="checked non-equivalence",
+        conditions=["x is Number"],
+        timing="during appraisal",
+    )
+    refusal_qualification = _make_qualification(
+        strength=QualificationStrength.TESTED,
+        basis="checked equivalence failed",
+        conditions=["x + 1 does not equal x + 2 for Number"],
+        timing="after appraisal",
+    )
+
+    _add_dicta(
+        concept,
+        [
+            ("agent edit", "Datum", proposal_qualification, "agent edit is Datum"),
+            (
+                "add_one",
+                "accepts Number",
+                behavior_qualification,
+                "add_one accepts Number",
+            ),
+            (
+                "add_one",
+                "returns Number",
+                behavior_qualification,
+                "add_one returns Number",
+            ),
+            (
+                "x + 1",
+                "does not equal x + 2 for Number",
+                disparity_qualification,
+                "x + 1 does not equal x + 2 for Number",
+            ),
+            (
+                "agent edit",
+                "changes add_one behavior",
+                refusal_qualification,
+                "agent edit changes add_one behavior",
+            ),
+            (
+                "agent edit",
+                "does not qualify by checked equivalence",
+                refusal_qualification,
+                "agent edit does not qualify by checked equivalence",
+            ),
+        ],
+    )
+
+    disparity = Disparity(
+        datum=datum,
+        concept=concept,
+        purpose=purpose,
+        description="agent edit violates behavior preservation Purpose",
+        severity="refusing",
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="refuse agent edit because behavior does not qualify",
+        basis="checked equivalence fails for add_one behavior",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="agent edit refused",
+        status="refused",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept records refused agent edit",
+            "Concept preserves original add_one behavior",
+        ],
+        note="agent edit refused; preserves original add_one behavior",
+    )
+    return _make_program("refused-agent-edit-demo", concept, revision)

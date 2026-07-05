@@ -5,6 +5,7 @@ from dicta.core.program import (
     build_counter_revision_demo_program,
     build_file_write_demo_program,
     build_invalid_arithmetic_demo_program,
+    build_refused_agent_edit_demo_program,
     build_refused_file_write_demo_program,
     build_supervised_worker_demo_program,
 )
@@ -386,3 +387,71 @@ def test_agent_edit_demo_revision_mentions_preserved_behavior() -> None:
     revision_text = " ".join([*revision.changes, revision.note or ""])
 
     assert "preserves add_one behavior" in revision_text
+
+
+def test_refused_agent_edit_demo_produces_program() -> None:
+    program = build_refused_agent_edit_demo_program()
+
+    assert isinstance(program, Program)
+
+
+def test_refused_agent_edit_demo_history_contains_revision() -> None:
+    program = build_refused_agent_edit_demo_program()
+
+    assert len(program.history) >= 1
+
+
+def test_refused_agent_edit_demo_concept_contains_agent_edit_as_datum() -> None:
+    program = build_refused_agent_edit_demo_program()
+
+    assert any(
+        dictum.subject == "agent edit" and dictum.meaning == "Datum"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_refused_agent_edit_demo_concept_contains_behavior_change() -> None:
+    program = build_refused_agent_edit_demo_program()
+
+    assert any(
+        dictum.subject == "agent edit"
+        and dictum.meaning == "changes add_one behavior"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_refused_agent_edit_demo_concept_contains_failed_equivalence() -> None:
+    program = build_refused_agent_edit_demo_program()
+
+    assert any(
+        dictum.subject == "agent edit"
+        and dictum.meaning == "does not qualify by checked equivalence"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_refused_agent_edit_demo_disparity_mentions_behavior_violation() -> None:
+    program = build_refused_agent_edit_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert "violates behavior preservation Purpose" in disparity.description
+
+
+def test_refused_agent_edit_demo_outcome_or_revision_mentions_refusal() -> None:
+    program = build_refused_agent_edit_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "agent edit refused" in str(revision.outcome.result) or (
+        "agent edit refused" in revision_text
+    )
+
+
+def test_refused_agent_edit_demo_revision_preserves_original_behavior() -> None:
+    program = build_refused_agent_edit_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "preserves original add_one behavior" in revision_text

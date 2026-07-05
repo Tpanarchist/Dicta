@@ -12,6 +12,7 @@ from dicta.core.program import (
     build_counter_revision_demo_program,
     build_file_write_demo_program,
     build_invalid_arithmetic_demo_program,
+    build_refused_agent_edit_demo_program,
     build_refused_file_write_demo_program,
     build_supervised_worker_demo_program,
     dictum_text,
@@ -140,4 +141,15 @@ def agent_edit_demo() -> None:
     _render_demo(
         build_agent_edit_demo_program(),
         "agent proposes replace add_one(x) = x + 1 with add_one(x) = 1 + x",
+    )
+
+
+@app.command()
+def refused_agent_edit_demo() -> None:
+    """Run the hard-coded refused AI agent edit demo."""
+
+    _render_demo(
+        build_refused_agent_edit_demo_program(),
+        "agent proposes replace add_one(x) = x + 1 with add_one(x) = x + 2",
+        show_disparity=True,
     )
