@@ -13,6 +13,14 @@ from dicta.core.models import (
     Revision,
 )
 from dicta.core.qualification import QualificationStrength
+from dicta.core.query import (
+    dicta_by_kind,
+    dicta_with_tag,
+    disparities_by_kind,
+    has_dictum_meaning,
+    outcomes_by_kind,
+    revisions_by_kind,
+)
 
 __all__ = [
     "Concept",
@@ -26,4 +34,10 @@ __all__ = [
     "Qualification",
     "QualificationStrength",
     "Revision",
+    "dicta_by_kind",
+    "dicta_with_tag",
+    "disparities_by_kind",
+    "has_dictum_meaning",
+    "outcomes_by_kind",
+    "revisions_by_kind",
 ]
