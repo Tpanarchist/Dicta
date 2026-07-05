@@ -107,6 +107,15 @@ For `counter = "cat"; counter = counter + 1`, the Program preserves
 Mutation is therefore not automatically allowed. Mutation is allowed only when
 it qualifies.
 
+## Appraisal Helper Extraction
+
+After mechanical success and refusal for arithmetic and counter revision, the
+shared appraisal shape was extracted into small helpers. The helpers classify
+narrow values, build typed Dicta, and wrap accepted or refused appraisal results
+without forcing each appraiser to repeat that boilerplate.
+
+This is still not syntax, not a general interpreter, and not a rule engine.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

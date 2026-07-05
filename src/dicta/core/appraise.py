@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 from dicta.core.models import (
     Concept,
     Disparity,
+    Dictum,
     Inference,
     Outcome,
     Program,
@@ -78,9 +79,118 @@ def _operand_text(value: int | str) -> str:
     return str(value)
 
 
-def _number_dictum(value: int) -> tuple[str, str, str]:
-    text = str(value)
-    return text, "Number", f"{text} is Number"
+def classify_value(value: int | str) -> str:
+    """Classify a narrow appraiser value."""
+
+    if isinstance(value, int):
+        return "Number"
+    if isinstance(value, str):
+        return "Text"
+
+    msg = "only integer and string values can be classified"
+    raise ValueError(msg)
+
+
+def _value_tag(value: int | str) -> str:
+    return classify_value(value).lower()
+
+
+def _value_condition(value: int | str) -> str:
+    if isinstance(value, int):
+        return "int operand"
+    return "str operand"
+
+
+def typed_dictum(
+    value: int | str,
+    *,
+    basis: str = "structured appraisal datum",
+    tags: tuple[str, ...] = (),
+) -> Dictum:
+    """Build a typed Dictum for a narrow appraiser value."""
+
+    subject = _operand_text(value)
+    meaning = classify_value(value)
+    qualification = checked(
+        basis=basis,
+        conditions=(_value_condition(value),),
+        timing="appraisal-time",
+    )
+    return produce_dictum(
+        subject,
+        meaning,
+        qualification,
+        display=f"{subject} is {meaning}",
+        kind="type",
+        tags=(*tags, _value_tag(value)),
+    )
+
+
+def _appraisal_result(
+    *,
+    datum: object,
+    concept: Concept,
+    revision: Revision,
+    program_name: str,
+    accepted: bool,
+    summary: str,
+    disparity: Disparity,
+    outcome: Outcome,
+) -> AppraisalResult:
+    program = append_revision(Program(name=program_name, concept=concept), revision)
+    return AppraisalResult(
+        datum=datum,
+        program=program,
+        accepted=accepted,
+        summary=summary,
+        disparity=disparity,
+        outcome=outcome,
+        revision=revision,
+    )
+
+
+def _accepted_result(
+    *,
+    datum: object,
+    concept: Concept,
+    revision: Revision,
+    program_name: str,
+    summary: str,
+    disparity: Disparity,
+    outcome: Outcome,
+) -> AppraisalResult:
+    return _appraisal_result(
+        datum=datum,
+        concept=concept,
+        revision=revision,
+        program_name=program_name,
+        accepted=True,
+        summary=summary,
+        disparity=disparity,
+        outcome=outcome,
+    )
+
+
+def _refused_result(
+    *,
+    datum: object,
+    concept: Concept,
+    revision: Revision,
+    program_name: str,
+    summary: str,
+    disparity: Disparity,
+    outcome: Outcome,
+) -> AppraisalResult:
+    return _appraisal_result(
+        datum=datum,
+        concept=concept,
+        revision=revision,
+        program_name=program_name,
+        accepted=False,
+        summary=summary,
+        disparity=disparity,
+        outcome=outcome,
+    )
 
 
 def _build_arithmetic_concept() -> tuple[Concept, Purpose]:
@@ -105,42 +215,18 @@ def _build_arithmetic_concept() -> tuple[Concept, Purpose]:
     return concept, purpose
 
 
-def _add_number_literal(concept: Concept, value: int) -> None:
-    subject, meaning, display = _number_dictum(value)
-    literal_qualification = checked(
-        basis="structured arithmetic datum",
-        conditions=("int operand",),
-        timing="appraisal-time",
-    )
+def _add_typed_literal(
+    concept: Concept,
+    value: int | str,
+    *,
+    tags: tuple[str, ...],
+) -> None:
     add_dictum(
         concept,
-        produce_dictum(
-            subject,
-            meaning,
-            literal_qualification,
-            display=display,
-            kind="type",
-            tags=("arithmetic", "number"),
-        ),
-    )
-
-
-def _add_text_literal(concept: Concept, value: str) -> None:
-    subject = _operand_text(value)
-    literal_qualification = checked(
-        basis="structured arithmetic datum",
-        conditions=("str operand",),
-        timing="appraisal-time",
-    )
-    add_dictum(
-        concept,
-        produce_dictum(
-            subject,
-            "Text",
-            literal_qualification,
-            display=f"{subject} is Text",
-            kind="type",
-            tags=("arithmetic", "text"),
+        typed_dictum(
+            value,
+            basis="structured arithmetic datum",
+            tags=tags,
         ),
     )
 
@@ -211,18 +297,14 @@ def _appraise_refused_counter_revision(
         kind="preserve_state",
         tags=("counter", "refusal"),
     )
-    program = append_revision(
-        Program(name="mechanical-refused-counter-revision-appraisal", concept=concept),
-        revision,
-    )
-    return AppraisalResult(
+    return _refused_result(
         datum=datum,
-        program=program,
-        accepted=False,
+        concept=concept,
+        revision=revision,
+        program_name="mechanical-refused-counter-revision-appraisal",
         summary="counter revision refused",
         disparity=disparity,
         outcome=outcome,
-        revision=revision,
     )
 
 
@@ -288,18 +370,14 @@ def _appraise_integer_addition(
         kind="record_result",
         tags=("arithmetic",),
     )
-    program = append_revision(
-        Program(name="mechanical-arithmetic-appraisal", concept=concept),
-        revision,
-    )
-    return AppraisalResult(
+    return _accepted_result(
         datum=datum,
-        program=program,
-        accepted=True,
+        concept=concept,
+        revision=revision,
+        program_name="mechanical-arithmetic-appraisal",
         summary="arithmetic expression accepted",
         disparity=disparity,
         outcome=outcome,
-        revision=revision,
     )
 
 
@@ -341,18 +419,14 @@ def _appraise_invalid_integer_text_addition(
         kind="record_result",
         tags=("arithmetic", "refusal"),
     )
-    program = append_revision(
-        Program(name="mechanical-invalid-arithmetic-appraisal", concept=concept),
-        revision,
-    )
-    return AppraisalResult(
+    return _refused_result(
         datum=datum,
-        program=program,
-        accepted=False,
+        concept=concept,
+        revision=revision,
+        program_name="mechanical-invalid-arithmetic-appraisal",
         summary="arithmetic expression refused",
         disparity=disparity,
         outcome=outcome,
-        revision=revision,
     )
 
 
@@ -367,12 +441,12 @@ def appraise_arithmetic_result(datum: ArithmeticDatum) -> AppraisalResult:
         raise ValueError(msg)
 
     concept, purpose = _build_arithmetic_concept()
-    _add_number_literal(concept, datum.left)
+    _add_typed_literal(concept, datum.left, tags=("arithmetic",))
 
     if isinstance(datum.right, int):
-        _add_number_literal(concept, datum.right)
+        _add_typed_literal(concept, datum.right, tags=("arithmetic",))
     elif isinstance(datum.right, str):
-        _add_text_literal(concept, datum.right)
+        _add_typed_literal(concept, datum.right, tags=("arithmetic",))
     else:
         msg = "only integer or string right operands are supported"
         raise ValueError(msg)
@@ -433,8 +507,8 @@ def appraise_counter_revision_result(
         ),
         timing="after revision",
     )
-    initial_kind = "Number" if isinstance(datum.initial, int) else "Text"
-    initial_tag = "number" if isinstance(datum.initial, int) else "text"
+    initial_kind = classify_value(datum.initial)
+    initial_tag = _value_tag(datum.initial)
     initial_value = _operand_text(datum.initial)
 
     add_dictum(
@@ -545,18 +619,14 @@ def appraise_counter_revision_result(
         tags=("counter",),
         operations=(operation,),
     )
-    program = append_revision(
-        Program(name="mechanical-counter-revision-appraisal", concept=concept),
-        revision,
-    )
-    return AppraisalResult(
+    return _accepted_result(
         datum=datum,
-        program=program,
-        accepted=True,
+        concept=concept,
+        revision=revision,
+        program_name="mechanical-counter-revision-appraisal",
         summary="counter revision accepted",
         disparity=disparity,
         outcome=outcome,
-        revision=revision,
     )
 
 

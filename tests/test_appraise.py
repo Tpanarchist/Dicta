@@ -9,6 +9,8 @@ from dicta.core.appraise import (
     appraise_arithmetic_result,
     appraise_counter_revision_datum,
     appraise_counter_revision_result,
+    classify_value,
+    typed_dictum,
 )
 from dicta.core.models import Program
 from dicta.core.query import has_dictum_meaning, has_dictum_text
@@ -49,6 +51,22 @@ def test_refused_counter_increment_datum_can_be_constructed() -> None:
     assert datum.initial == "cat"
     assert datum.increment == 1
     assert datum.statement_text() == 'counter = "cat"; counter = counter + 1'
+
+
+def test_classify_value_identifies_number() -> None:
+    assert classify_value(3) == "Number"
+
+
+def test_classify_value_identifies_text() -> None:
+    assert classify_value("cat") == "Text"
+
+
+def test_typed_dictum_renders_number_visible_text() -> None:
+    dictum = typed_dictum(3, tags=("arithmetic",))
+
+    assert dictum.subject == "3"
+    assert dictum.meaning == "Number"
+    assert dictum.visible_text() == "3 is Number"
 
 
 def test_appraise_arithmetic_datum_returns_program() -> None:
