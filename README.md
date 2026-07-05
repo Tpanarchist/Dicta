@@ -20,6 +20,11 @@ Datum -> Dictum -> Qualification -> Concept -> Purpose -> Disparity -> Inference
 - A hard-coded Typer CLI demo for `3 + 4`.
 - Tests proving the initial model layer and demo representation.
 
+## Docs
+
+- [Foundation design record](docs/design_record_000_foundation.md)
+- [Semantic test matrix](docs/semantic_test_matrix_000.md)
+
 ## Not in scope yet
 
 - Parser
