@@ -37,6 +37,21 @@ def _echo_section(title: str, items: list[object]) -> None:
         typer.echo(f"* {item}")
 
 
+def _qualification_text(program: Program) -> list[str]:
+    items: list[str] = []
+    for dictum in program.concept.dicta:
+        qualification = dictum.qualification
+        conditions = ", ".join(qualification.conditions) or "none"
+        items.append(
+            f"{dictum.visible_text()}: "
+            f"{qualification.strength.value}; "
+            f"basis={qualification.basis or 'unspecified'}; "
+            f"conditions={conditions}; "
+            f"timing={qualification.timing}"
+        )
+    return items
+
+
 def _render_demo(
     program: Program,
     datum: str,
@@ -53,7 +68,7 @@ def _render_demo(
     typer.echo(f"Datum: {datum}")
     _echo_section("Dicta", [dictum_text(dictum) for dictum in program.concept.dicta])
     if show_qualification:
-        _echo_section("Qualification", [revision.note or ""])
+        _echo_section("Qualification", _qualification_text(program))
     if show_purpose and program.concept.purpose is not None:
         _echo_section("Purpose", [program.concept.purpose.statement])
     if show_disparity:

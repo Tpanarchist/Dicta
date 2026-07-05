@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from dicta.core.models import (
@@ -19,7 +20,11 @@ from dicta.core.models import (
 from dicta.core.qualification import QualificationStrength
 
 
-def receive_datum(value: Any, source: str | None = None, note: str | None = None) -> Datum:
+def receive_datum(
+    value: Any,
+    source: str | None = None,
+    note: str | None = None,
+) -> Datum:
     """Receive material before meaning is settled."""
 
     return Datum(value=value, source=source, note=note)
@@ -29,6 +34,7 @@ def produce_dictum(
     subject: str,
     meaning: str,
     qualification: Qualification | None = None,
+    display: str | None = None,
     metadata: dict[str, Any] | None = None,
     kind: str | None = None,
     tags: tuple[str, ...] = (),
@@ -39,16 +45,11 @@ def produce_dictum(
         subject=subject,
         meaning=meaning,
         qualification=qualification or Qualification(),
+        display=display,
         metadata=metadata or {},
         kind=kind,
         tags=tags,
     )
-
-
-def attach_qualification(dictum: Dictum, qualification: Qualification) -> Dictum:
-    """Attach a Qualification to a Dictum."""
-
-    return dictum.model_copy(update={"qualification": qualification})
 
 
 def add_dictum(concept: Concept, dictum: Dictum) -> Concept:
@@ -104,10 +105,17 @@ def append_revision(program: Program, revision: Revision) -> Program:
 def dictum_text(dictum: Dictum) -> str:
     """Render a Dictum for the plain-text demo."""
 
-    display = dictum.metadata.get("display")
-    if isinstance(display, str):
-        return display
-    return f"{dictum.subject} is {dictum.meaning}"
+    return dictum.visible_text()
+
+
+@dataclass(frozen=True)
+class _DictumSpec:
+    subject: str
+    meaning: str
+    qualification: Qualification
+    display: str
+    kind: str | None = None
+    tags: tuple[str, ...] = ()
 
 
 def _make_qualification(
@@ -145,7 +153,7 @@ def _make_dictum(
         subject,
         meaning,
         qualification,
-        {"display": display},
+        display=display,
         kind=kind,
         tags=tags,
     )
@@ -153,14 +161,19 @@ def _make_dictum(
 
 def _add_dicta(
     concept: Concept,
-    dicta: list[tuple[Any, ...]],
+    dicta: list[_DictumSpec],
 ) -> None:
-    for subject, meaning, qualification, display, *category in dicta:
-        kind = category[0] if category else None
-        tags = category[1] if len(category) > 1 else ()
+    for spec in dicta:
         add_dictum(
             concept,
-            _make_dictum(subject, meaning, qualification, display, kind, tags),
+            _make_dictum(
+                spec.subject,
+                spec.meaning,
+                spec.qualification,
+                spec.display,
+                spec.kind,
+                spec.tags,
+            ),
         )
 
 
@@ -200,15 +213,14 @@ def build_arithmetic_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            ("3", "Number", literal_qualification, "3 is Number"),
-            ("4", "Number", literal_qualification, "4 is Number"),
-            (
+            _DictumSpec("3", "Number", literal_qualification, "3 is Number"),
+            _DictumSpec("4", "Number", literal_qualification, "4 is Number"),
+            _DictumSpec(
                 "+",
                 "accepts Number, Number",
                 operator_qualification,
                 "+ accepts Number, Number",
             ),
-            ("3 + 4", "7", result_qualification, "3 + 4 is 7"),
         ],
     )
 
@@ -218,6 +230,17 @@ def build_arithmetic_demo_program() -> Program:
         purpose=purpose,
         description="The received arithmetic datum lacks an evaluated result.",
         severity="low",
+    )
+    _add_dicta(
+        concept,
+        [
+            _DictumSpec(
+                "3 + 4",
+                "7",
+                result_qualification,
+                "3 + 4 is 7",
+            ),
+        ],
     )
     inference = Inference(
         from_disparity=disparity,
@@ -270,9 +293,9 @@ def build_invalid_arithmetic_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            ("3", "Number", literal_qualification, "3 is Number"),
-            ('"cat"', "Text", literal_qualification, '"cat" is Text'),
-            (
+            _DictumSpec("3", "Number", literal_qualification, "3 is Number"),
+            _DictumSpec('"cat"', "Text", literal_qualification, '"cat" is Text'),
+            _DictumSpec(
                 "+",
                 "accepts Number, Number",
                 operator_qualification,
@@ -353,16 +376,19 @@ def build_counter_revision_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            ("counter", "Number", type_qualification, "counter is Number"),
-            ("counter", "0", value_qualification, "counter is 0"),
-            (
+            _DictumSpec(
+                "counter",
+                "Number",
+                type_qualification,
+                "counter is Number",
+            ),
+            _DictumSpec("counter", "0", value_qualification, "counter is 0"),
+            _DictumSpec(
                 "+",
                 "accepts Number, Number",
                 operator_qualification,
                 "+ accepts Number, Number",
             ),
-            ("counter + 1", "1", revision_qualification, "counter + 1 is 1"),
-            ("counter", "1", revision_qualification, "counter is 1"),
         ],
     )
 
@@ -372,6 +398,23 @@ def build_counter_revision_demo_program() -> Program:
         purpose=purpose,
         description="counter is 0 before a valid increment revision",
         severity="revision",
+    )
+    concept.dicta = [
+        dictum
+        for dictum in concept.dicta
+        if not (dictum.subject == "counter" and dictum.meaning == "0")
+    ]
+    _add_dicta(
+        concept,
+        [
+            _DictumSpec(
+                "counter + 1",
+                "1",
+                revision_qualification,
+                "counter + 1 is 1",
+            ),
+            _DictumSpec("counter", "1", revision_qualification, "counter is 1"),
+        ],
     )
     inference = Inference(
         from_disparity=disparity,
@@ -436,15 +479,20 @@ def build_file_write_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            ("report.txt", "FilePath", input_qualification, "report.txt is FilePath"),
-            ('"hello"', "Text", input_qualification, '"hello" is Text'),
-            (
+            _DictumSpec(
+                "report.txt",
+                "FilePath",
+                input_qualification,
+                "report.txt is FilePath",
+            ),
+            _DictumSpec('"hello"', "Text", input_qualification, '"hello" is Text'),
+            _DictumSpec(
                 "write",
                 "accepts FilePath, Text",
                 operation_qualification,
                 "write accepts FilePath, Text",
             ),
-            (
+            _DictumSpec(
                 "write",
                 "changes Disk",
                 operation_qualification,
@@ -452,7 +500,7 @@ def build_file_write_demo_program() -> Program:
                 "effect",
                 ("disk", "write"),
             ),
-            (
+            _DictumSpec(
                 "write",
                 "requires Permission",
                 operation_qualification,
@@ -460,21 +508,13 @@ def build_file_write_demo_program() -> Program:
                 "permission",
                 ("write",),
             ),
-            (
+            _DictumSpec(
                 "Permission",
                 "qualifies for report.txt",
                 permission_qualification,
                 "Permission qualifies for report.txt",
                 "permission",
                 ("write", "report.txt"),
-            ),
-            (
-                "report.txt",
-                'contains "hello"',
-                effect_qualification,
-                'report.txt contains "hello"',
-                "effect",
-                ("disk", "report.txt"),
             ),
         ],
     )
@@ -485,6 +525,19 @@ def build_file_write_demo_program() -> Program:
         purpose=purpose,
         description='report.txt does not yet contain "hello"',
         severity="effect",
+    )
+    _add_dicta(
+        concept,
+        [
+            _DictumSpec(
+                "report.txt",
+                'contains "hello"',
+                effect_qualification,
+                'report.txt contains "hello"',
+                "effect",
+                ("disk", "report.txt"),
+            ),
+        ],
     )
     inference = Inference(
         from_disparity=disparity,
@@ -546,20 +599,20 @@ def build_refused_file_write_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            (
+            _DictumSpec(
                 "protected/report.txt",
                 "FilePath",
                 input_qualification,
                 "protected/report.txt is FilePath",
             ),
-            ('"hello"', "Text", input_qualification, '"hello" is Text'),
-            (
+            _DictumSpec('"hello"', "Text", input_qualification, '"hello" is Text'),
+            _DictumSpec(
                 "write",
                 "accepts FilePath, Text",
                 operation_qualification,
                 "write accepts FilePath, Text",
             ),
-            (
+            _DictumSpec(
                 "write",
                 "changes Disk",
                 operation_qualification,
@@ -567,7 +620,7 @@ def build_refused_file_write_demo_program() -> Program:
                 "effect",
                 ("disk", "write"),
             ),
-            (
+            _DictumSpec(
                 "write",
                 "requires Permission",
                 operation_qualification,
@@ -575,7 +628,7 @@ def build_refused_file_write_demo_program() -> Program:
                 "permission",
                 ("write",),
             ),
-            (
+            _DictumSpec(
                 "Permission",
                 "does not qualify for protected/report.txt",
                 permission_qualification,
@@ -661,40 +714,38 @@ def build_supervised_worker_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            ("worker", "Program", worker_qualification, "worker is Program"),
-            ("worker", "Alive", worker_qualification, "worker is Alive"),
-            (
+            _DictumSpec("worker", "Program", worker_qualification, "worker is Program"),
+            _DictumSpec("worker", "Alive", worker_qualification, "worker is Alive"),
+            _DictumSpec(
                 "worker",
                 "serves background task",
                 worker_qualification,
                 "worker serves background task",
             ),
-            (
+            _DictumSpec(
                 "supervisor",
                 "requires worker Alive",
                 supervision_qualification,
                 "supervisor requires worker Alive",
             ),
-            (
+            _DictumSpec(
                 "worker Outcome",
                 "crash",
                 failure_qualification,
                 "worker Outcome is crash",
             ),
-            ("worker", "not Alive", failure_qualification, "worker is not Alive"),
-            (
+            _DictumSpec(
+                "worker",
+                "not Alive",
+                failure_qualification,
+                "worker is not Alive",
+            ),
+            _DictumSpec(
                 "known-good worker Concept",
                 "exists",
                 supervision_qualification,
                 "known-good worker Concept exists",
             ),
-            (
-                "worker restart",
-                "accepted",
-                restart_qualification,
-                "worker restart accepted",
-            ),
-            ("worker", "Alive", restart_qualification, "worker is Alive"),
         ],
     )
 
@@ -706,6 +757,18 @@ def build_supervised_worker_demo_program() -> Program:
         severity="recovering",
         kind="worker_unavailable",
         tags=("worker", "supervision"),
+    )
+    _add_dicta(
+        concept,
+        [
+            _DictumSpec(
+                "worker restart",
+                "accepted",
+                restart_qualification,
+                "worker restart accepted",
+            ),
+            _DictumSpec("worker", "Alive", restart_qualification, "worker is Alive"),
+        ],
     )
     inference = Inference(
         from_disparity=disparity,
@@ -730,7 +793,7 @@ def build_supervised_worker_demo_program() -> Program:
         kind="restore_state",
         tags=("worker", "supervision"),
     )
-    return _make_program("supervisor-demo", concept, revision)
+    return _make_program("supervised-worker-demo", concept, revision)
 
 
 def build_agent_edit_demo_program() -> Program:
@@ -774,7 +837,7 @@ def build_agent_edit_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            (
+            _DictumSpec(
                 "agent edit",
                 "Datum",
                 proposal_qualification,
@@ -782,41 +845,25 @@ def build_agent_edit_demo_program() -> Program:
                 "agent",
                 ("proposal",),
             ),
-            (
+            _DictumSpec(
                 "add_one",
                 "accepts Number",
                 behavior_qualification,
                 "add_one accepts Number",
             ),
-            (
+            _DictumSpec(
                 "add_one",
                 "returns Number",
                 behavior_qualification,
                 "add_one returns Number",
             ),
-            (
+            _DictumSpec(
                 "x + 1",
                 "equals 1 + x for Number",
                 equivalence_qualification,
                 "x + 1 equals 1 + x for Number",
                 "equivalence",
                 ("add_one", "number"),
-            ),
-            (
-                "agent edit",
-                "preserves add_one behavior",
-                acceptance_qualification,
-                "agent edit preserves add_one behavior",
-                "behavior",
-                ("agent", "add_one"),
-            ),
-            (
-                "agent edit",
-                "qualifies by checked equivalence",
-                acceptance_qualification,
-                "agent edit qualifies by checked equivalence",
-                "agent",
-                ("checked_equivalence",),
             ),
         ],
     )
@@ -827,6 +874,27 @@ def build_agent_edit_demo_program() -> Program:
         purpose=purpose,
         description="agent edit is Datum before behavior Qualification",
         severity="appraising",
+    )
+    _add_dicta(
+        concept,
+        [
+            _DictumSpec(
+                "agent edit",
+                "preserves add_one behavior",
+                acceptance_qualification,
+                "agent edit preserves add_one behavior",
+                "behavior",
+                ("agent", "add_one"),
+            ),
+            _DictumSpec(
+                "agent edit",
+                "qualifies by checked equivalence",
+                acceptance_qualification,
+                "agent edit qualifies by checked equivalence",
+                "agent",
+                ("checked_equivalence",),
+            ),
+        ],
     )
     inference = Inference(
         from_disparity=disparity,
@@ -894,7 +962,7 @@ def build_refused_agent_edit_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            (
+            _DictumSpec(
                 "agent edit",
                 "Datum",
                 proposal_qualification,
@@ -902,19 +970,19 @@ def build_refused_agent_edit_demo_program() -> Program:
                 "agent",
                 ("proposal",),
             ),
-            (
+            _DictumSpec(
                 "add_one",
                 "accepts Number",
                 behavior_qualification,
                 "add_one accepts Number",
             ),
-            (
+            _DictumSpec(
                 "add_one",
                 "returns Number",
                 behavior_qualification,
                 "add_one returns Number",
             ),
-            (
+            _DictumSpec(
                 "x + 1",
                 "does not equal x + 2 for Number",
                 disparity_qualification,
@@ -922,7 +990,7 @@ def build_refused_agent_edit_demo_program() -> Program:
                 "equivalence",
                 ("add_one", "number"),
             ),
-            (
+            _DictumSpec(
                 "agent edit",
                 "changes add_one behavior",
                 refusal_qualification,
@@ -930,7 +998,7 @@ def build_refused_agent_edit_demo_program() -> Program:
                 "behavior",
                 ("agent", "add_one"),
             ),
-            (
+            _DictumSpec(
                 "agent edit",
                 "does not qualify by checked equivalence",
                 refusal_qualification,

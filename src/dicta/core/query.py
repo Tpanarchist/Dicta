@@ -5,10 +5,7 @@ from dicta.core.qualification import QualificationStrength
 
 
 def _visible_dictum_text(dictum: Dictum) -> str:
-    display = dictum.metadata.get("display")
-    if isinstance(display, str):
-        return display
-    return f"{dictum.subject} is {dictum.meaning}"
+    return dictum.visible_text()
 
 
 def dicta_by_kind(program: Program, kind: str) -> tuple[Dictum, ...]:
@@ -31,14 +28,22 @@ def dicta_by_qualification_strength(
 
     target = QualificationStrength(strength)
     return tuple(
-        dictum for dictum in program.concept.dicta if dictum.qualification.strength == target
+        dictum
+        for dictum in program.concept.dicta
+        if dictum.qualification.strength == target
     )
 
 
 def has_dictum_meaning(program: Program, meaning: str) -> bool:
-    """Return whether any Dictum has the requested visible meaning."""
+    """Return whether any Dictum has the requested semantic meaning."""
 
-    return any(_visible_dictum_text(dictum) == meaning for dictum in program.concept.dicta)
+    return any(dictum.meaning == meaning for dictum in program.concept.dicta)
+
+
+def has_dictum_text(program: Program, text: str) -> bool:
+    """Return whether any Dictum has the requested visible text."""
+
+    return any(_visible_dictum_text(dictum) == text for dictum in program.concept.dicta)
 
 
 def disparities_by_kind(program: Program, kind: str) -> tuple[Disparity, ...]:
@@ -54,7 +59,11 @@ def disparities_by_kind(program: Program, kind: str) -> tuple[Disparity, ...]:
 def outcomes_by_kind(program: Program, kind: str) -> tuple[Outcome, ...]:
     """Return Outcomes in Program history with a matching kind."""
 
-    return tuple(revision.outcome for revision in program.history if revision.outcome.kind == kind)
+    return tuple(
+        revision.outcome
+        for revision in program.history
+        if revision.outcome.kind == kind
+    )
 
 
 def revisions_by_kind(program: Program, kind: str) -> tuple[Revision, ...]:

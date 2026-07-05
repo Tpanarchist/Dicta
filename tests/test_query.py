@@ -11,6 +11,7 @@ from dicta.core.query import (
     dicta_with_tag,
     disparities_by_kind,
     has_dictum_meaning,
+    has_dictum_text,
     outcomes_by_kind,
     revisions_by_kind,
 )
@@ -22,7 +23,10 @@ def test_dicta_by_kind_finds_effect_dicta() -> None:
 
     dicta = dicta_by_kind(program, "effect")
 
-    assert any(dictum.subject == "write" and dictum.meaning == "changes Disk" for dictum in dicta)
+    assert any(
+        dictum.subject == "write" and dictum.meaning == "changes Disk"
+        for dictum in dicta
+    )
 
 
 def test_dicta_by_kind_finds_permission_dicta() -> None:
@@ -61,10 +65,16 @@ def test_dicta_by_qualification_strength_accepts_string_value() -> None:
     assert any(dictum.subject == "Permission" for dictum in dicta)
 
 
-def test_has_dictum_meaning_finds_visible_meaning() -> None:
+def test_has_dictum_meaning_finds_semantic_meaning() -> None:
     program = build_arithmetic_demo_program()
 
-    assert has_dictum_meaning(program, "3 + 4 is 7")
+    assert has_dictum_meaning(program, "7")
+
+
+def test_has_dictum_text_finds_visible_text() -> None:
+    program = build_arithmetic_demo_program()
+
+    assert has_dictum_text(program, "3 + 4 is 7")
 
 
 def test_disparities_by_kind_finds_permission_denied() -> None:
@@ -73,7 +83,10 @@ def test_disparities_by_kind_finds_permission_denied() -> None:
     disparities = disparities_by_kind(program, "permission_denied")
 
     assert len(disparities) == 1
-    assert disparities[0].description == "write lacks Permission for protected/report.txt"
+    assert (
+        disparities[0].description
+        == "write lacks Permission for protected/report.txt"
+    )
 
 
 def test_outcomes_by_kind_finds_agent_refusal() -> None:

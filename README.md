@@ -17,12 +17,15 @@ Datum -> Dictum -> Qualification -> Concept -> Purpose -> Disparity -> Inference
 
 - Pydantic contracts for the first semantic terms.
 - A small program-motion helper layer.
-- A hard-coded Typer CLI demo for `3 + 4`.
-- Tests proving the initial model layer and demo representation.
+- Hard-coded Typer CLI demos for arithmetic success/refusal, counter revision,
+  file-write effects, supervised worker failure, and AI-agent edit appraisal.
+- Tests proving the current model layer, query helpers, and demo
+  representations.
 
 ## Docs
 
 - [Foundation design record](docs/design_record_000_foundation.md)
+- [Revision projection design record](docs/design_record_001_revision_projection.md)
 - [Semantic test matrix](docs/semantic_test_matrix_000.md)
 
 ## Not in scope yet
@@ -65,5 +68,4 @@ ruff check .
 dicta demo
 ```
 
-The demo is hard-coded. It represents `3 + 4` semantically; it does not parse
-source text.
+The demos are hard-coded semantic fixtures. They do not parse source text.

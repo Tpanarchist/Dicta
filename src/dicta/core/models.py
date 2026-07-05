@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from dicta.core.qualification import QualificationStrength
 
@@ -38,9 +38,22 @@ class Dictum(BaseModel):
     subject: str
     meaning: str
     qualification: Qualification = Field(default_factory=Qualification)
+    display: str | None = Field(default=None)
     metadata: dict[str, Any] = Field(default_factory=dict)
     kind: str | None = None
     tags: tuple[str, ...] = Field(default_factory=tuple)
+
+    def visible_text(self) -> str:
+        """Return the plain-text rendering of this Dictum."""
+
+        if self.display is not None:
+            return self.display
+
+        legacy_display = self.metadata.get("display")
+        if isinstance(legacy_display, str):
+            return legacy_display
+
+        return f"{self.subject} is {self.meaning}"
 
 
 class Purpose(BaseModel):
@@ -75,6 +88,13 @@ class Disparity(BaseModel):
     severity: str = Field(default="noted")
     kind: str | None = None
     tags: tuple[str, ...] = Field(default_factory=tuple)
+
+    @field_validator("concept", mode="before")
+    @classmethod
+    def _snapshot_concept(cls, value: Concept) -> Concept:
+        if isinstance(value, Concept):
+            return value.model_copy(deep=True)
+        return value
 
 
 class Inference(BaseModel):

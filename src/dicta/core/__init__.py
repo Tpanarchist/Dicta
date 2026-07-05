@@ -25,6 +25,7 @@ from dicta.core.query import (
     dicta_with_tag,
     disparities_by_kind,
     has_dictum_meaning,
+    has_dictum_text,
     outcomes_by_kind,
     revisions_by_kind,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "dicta_with_tag",
     "disparities_by_kind",
     "has_dictum_meaning",
+    "has_dictum_text",
     "outcomes_by_kind",
     "proved",
     "revisions_by_kind",

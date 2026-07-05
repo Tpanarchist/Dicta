@@ -74,6 +74,19 @@ def test_dictum_can_hold_qualification() -> None:
     assert dictum.qualification.strength == QualificationStrength.TESTED
 
 
+def test_dictum_can_carry_visible_display_text() -> None:
+    dictum = Dictum(subject="3 + 4", meaning="7", display="3 + 4 is 7")
+
+    assert dictum.display == "3 + 4 is 7"
+    assert dictum.visible_text() == "3 + 4 is 7"
+
+
+def test_dictum_visible_text_falls_back_to_subject_and_meaning() -> None:
+    dictum = Dictum(subject="3", meaning="Number")
+
+    assert dictum.visible_text() == "3 is Number"
+
+
 def test_concept_can_hold_dicta() -> None:
     dictum = Dictum(subject="3", meaning="Number")
     concept = Concept(
@@ -114,6 +127,25 @@ def test_disparity_can_carry_kind_and_tags() -> None:
 
     assert disparity.kind == "permission_denied"
     assert disparity.tags == ("write", "protected/report.txt")
+
+
+def test_disparity_snapshots_concept() -> None:
+    purpose = Purpose(statement="observe before state")
+    concept = Concept(
+        name="snapshot-demo",
+        purpose=purpose,
+        dicta=[Dictum(subject="counter", meaning="0")],
+    )
+    disparity = Disparity(
+        datum=Datum(value="counter = counter + 1"),
+        concept=concept,
+        purpose=purpose,
+        description="counter is 0 before revision",
+    )
+
+    concept.dicta.append(Dictum(subject="counter", meaning="1"))
+
+    assert [dictum.meaning for dictum in disparity.concept.dicta] == ["0"]
 
 
 def test_outcome_can_carry_kind_and_tags() -> None:

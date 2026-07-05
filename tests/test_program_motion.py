@@ -60,13 +60,19 @@ def test_demo_represents_full_semantic_chain() -> None:
     assert revision.changes == ["concept records evaluated arithmetic dictum"]
 
 
+def test_arithmetic_disparity_snapshot_precedes_result_dictum() -> None:
+    program = build_arithmetic_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert not any(
+        dictum.subject == "3 + 4" and dictum.meaning == "7"
+        for dictum in disparity.concept.dicta
+    )
+
+
 def test_invalid_arithmetic_demo_contains_relevant_dicta() -> None:
     program = build_invalid_arithmetic_demo_program()
-    displayed_dicta = {
-        dictum.metadata["display"]
-        for dictum in program.concept.dicta
-        if "display" in dictum.metadata
-    }
+    displayed_dicta = {dictum.visible_text() for dictum in program.concept.dicta}
 
     assert displayed_dicta == {
         "3 is Number",
@@ -109,6 +115,25 @@ def test_counter_revision_demo_concept_contains_final_counter_value() -> None:
     assert any(
         dictum.subject == "counter" and dictum.meaning == "1"
         for dictum in program.concept.dicta
+    )
+
+
+def test_counter_revision_demo_final_concept_replaces_old_counter_value() -> None:
+    program = build_counter_revision_demo_program()
+
+    assert not any(
+        dictum.subject == "counter" and dictum.meaning == "0"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_counter_revision_demo_disparity_snapshot_contains_old_counter_value() -> None:
+    program = build_counter_revision_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert any(
+        dictum.subject == "counter" and dictum.meaning == "0"
+        for dictum in disparity.concept.dicta
     )
 
 
@@ -206,6 +231,16 @@ def test_file_write_demo_revision_notes_disk_changed_by_write() -> None:
     assert "Disk changed by write" in revision_text
 
 
+def test_file_write_disparity_snapshot_excludes_written_content() -> None:
+    program = build_file_write_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert not any(
+        dictum.subject == "report.txt" and dictum.meaning == 'contains "hello"'
+        for dictum in disparity.concept.dicta
+    )
+
+
 def test_file_write_demo_contains_effect_kind_dictum() -> None:
     program = build_file_write_demo_program()
 
@@ -288,6 +323,7 @@ def test_supervised_worker_demo_produces_program() -> None:
     program = build_supervised_worker_demo_program()
 
     assert isinstance(program, Program)
+    assert program.name == "supervised-worker-demo"
 
 
 def test_supervised_worker_demo_history_contains_revision() -> None:
