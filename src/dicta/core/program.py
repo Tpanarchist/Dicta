@@ -589,3 +589,151 @@ def build_refused_file_write_demo_program() -> Program:
     )
     program = Program(name="refused-file-write-demo", concept=concept)
     return append_revision(program, revision)
+
+
+def build_supervised_worker_demo_program() -> Program:
+    """Build the hard-coded representation for supervised worker recovery."""
+
+    datum = receive_datum(
+        "worker Outcome is crash",
+        source="dicta demo",
+        note="hard-coded supervised worker failure",
+    )
+    purpose = Purpose(statement="keep worker available", mode="demo")
+    concept = Concept(name="supervised-worker-demo", purpose=purpose)
+
+    worker_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="supervisor concept",
+        conditions=["demo input"],
+        timing="before crash",
+    )
+    supervision_qualification = Qualification(
+        strength=QualificationStrength.ASSERTED,
+        basis="availability purpose",
+        conditions=["worker"],
+        timing="before crash",
+    )
+    failure_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="observed child outcome",
+        conditions=["worker Outcome"],
+        timing="after crash",
+    )
+    restart_qualification = Qualification(
+        strength=QualificationStrength.TESTED,
+        basis="known-good worker Concept",
+        conditions=["worker is Program", "known-good worker Concept exists"],
+        timing="after restart",
+    )
+
+    add_dictum(
+        concept,
+        produce_dictum(
+            "worker",
+            "Program",
+            worker_qualification,
+            {"display": "worker is Program"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "worker",
+            "Alive",
+            worker_qualification,
+            {"display": "worker is Alive"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "worker",
+            "serves background task",
+            worker_qualification,
+            {"display": "worker serves background task"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "supervisor",
+            "requires worker Alive",
+            supervision_qualification,
+            {"display": "supervisor requires worker Alive"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "worker Outcome",
+            "crash",
+            failure_qualification,
+            {"display": "worker Outcome is crash"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "worker",
+            "not Alive",
+            failure_qualification,
+            {"display": "worker is not Alive"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "known-good worker Concept",
+            "exists",
+            supervision_qualification,
+            {"display": "known-good worker Concept exists"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "worker restart",
+            "accepted",
+            restart_qualification,
+            {"display": "worker restart accepted"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "worker",
+            "Alive",
+            restart_qualification,
+            {"display": "worker is Alive"},
+        ),
+    )
+
+    disparity = Disparity(
+        datum=datum,
+        concept=concept,
+        purpose=purpose,
+        description="worker is not Alive under availability Purpose",
+        severity="recovering",
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="restart worker from known-good Concept",
+        basis="supervisor requires worker Alive",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="worker restarted",
+        status="restarted",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept records worker crash",
+            "Concept records worker restarted",
+            "Concept restores worker is Alive",
+        ],
+        note="worker restarted; restores worker is Alive",
+    )
+    program = Program(name="supervisor-demo", concept=concept)
+    return append_revision(program, revision)

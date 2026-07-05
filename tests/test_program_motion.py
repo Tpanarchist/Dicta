@@ -5,6 +5,7 @@ from dicta.core.program import (
     build_file_write_demo_program,
     build_invalid_arithmetic_demo_program,
     build_refused_file_write_demo_program,
+    build_supervised_worker_demo_program,
 )
 
 
@@ -236,3 +237,90 @@ def test_refused_file_write_demo_disparity_mentions_missing_permission() -> None
     disparity = program.history[-1].outcome.inference.from_disparity
 
     assert "write lacks Permission" in disparity.description
+
+
+def test_supervised_worker_demo_produces_program() -> None:
+    program = build_supervised_worker_demo_program()
+
+    assert isinstance(program, Program)
+
+
+def test_supervised_worker_demo_history_contains_revision() -> None:
+    program = build_supervised_worker_demo_program()
+
+    assert len(program.history) >= 1
+
+
+def test_supervised_worker_demo_concept_contains_worker_program_dictum() -> None:
+    program = build_supervised_worker_demo_program()
+
+    assert any(
+        dictum.subject == "worker" and dictum.meaning == "Program"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_supervised_worker_demo_concept_contains_supervisor_requirement() -> None:
+    program = build_supervised_worker_demo_program()
+
+    assert any(
+        dictum.subject == "supervisor"
+        and dictum.meaning == "requires worker Alive"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_supervised_worker_demo_concept_contains_worker_crash() -> None:
+    program = build_supervised_worker_demo_program()
+
+    assert any(
+        dictum.subject == "worker Outcome" and dictum.meaning == "crash"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_supervised_worker_demo_concept_contains_worker_not_alive() -> None:
+    program = build_supervised_worker_demo_program()
+
+    assert any(
+        dictum.subject == "worker" and dictum.meaning == "not Alive"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_supervised_worker_demo_concept_contains_known_good_concept() -> None:
+    program = build_supervised_worker_demo_program()
+
+    assert any(
+        dictum.subject == "known-good worker Concept"
+        and dictum.meaning == "exists"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_supervised_worker_demo_concept_contains_worker_alive_after_restart() -> None:
+    program = build_supervised_worker_demo_program()
+    alive_dicta = [
+        dictum
+        for dictum in program.concept.dicta
+        if dictum.subject == "worker" and dictum.meaning == "Alive"
+    ]
+
+    assert len(alive_dicta) >= 2
+
+
+def test_supervised_worker_demo_disparity_mentions_worker_not_alive() -> None:
+    program = build_supervised_worker_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert "worker is not Alive" in disparity.description
+
+
+def test_supervised_worker_demo_revision_mentions_restart_or_restore() -> None:
+    program = build_supervised_worker_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "worker restarted" in revision_text
+    assert "restores worker is Alive" in revision_text

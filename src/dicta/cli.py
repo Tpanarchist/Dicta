@@ -11,6 +11,7 @@ from dicta.core.program import (
     build_file_write_demo_program,
     build_invalid_arithmetic_demo_program,
     build_refused_file_write_demo_program,
+    build_supervised_worker_demo_program,
     dictum_text,
 )
 
@@ -160,6 +161,39 @@ def refused_file_write_demo() -> None:
     disparity = inference.from_disparity
 
     typer.echo('Datum: write protected/report.txt "hello"')
+    typer.echo("")
+    typer.echo("Dicta:")
+    for dictum in program.concept.dicta:
+        typer.echo(f"* {dictum_text(dictum)}")
+    typer.echo("")
+    typer.echo("Purpose:")
+    typer.echo(f"* {program.concept.purpose.statement}")
+    typer.echo("")
+    typer.echo("Disparity:")
+    typer.echo(f"* {disparity.description}")
+    typer.echo("")
+    typer.echo("Inference:")
+    typer.echo(f"* {inference.derived}")
+    typer.echo("")
+    typer.echo("Outcome:")
+    typer.echo(f"* {outcome.result}")
+    typer.echo("")
+    typer.echo("Revision:")
+    for change in revision.changes:
+        typer.echo(f"* {change}")
+
+
+@app.command()
+def supervised_worker_demo() -> None:
+    """Run the hard-coded supervised worker failure demo."""
+
+    program = build_supervised_worker_demo_program()
+    revision = program.history[-1]
+    outcome = revision.outcome
+    inference = outcome.inference
+    disparity = inference.from_disparity
+
+    typer.echo("Datum: worker Outcome is crash")
     typer.echo("")
     typer.echo("Dicta:")
     for dictum in program.concept.dicta:
