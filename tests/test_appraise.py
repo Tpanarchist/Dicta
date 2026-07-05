@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
 from dicta.cli import app
@@ -5,10 +8,13 @@ from dicta.core.appraise import (
     AppraisalResult,
     ArithmeticDatum,
     CounterIncrementDatum,
+    FileWriteDatum,
     appraise_arithmetic_datum,
     appraise_arithmetic_result,
     appraise_counter_revision_datum,
     appraise_counter_revision_result,
+    appraise_file_write_datum,
+    appraise_file_write_result,
     classify_value,
     typed_dictum,
 )
@@ -53,6 +59,14 @@ def test_refused_counter_increment_datum_can_be_constructed() -> None:
     assert datum.statement_text() == 'counter = "cat"; counter = counter + 1'
 
 
+def test_file_write_datum_can_be_constructed() -> None:
+    datum = FileWriteDatum(path="report.txt", content="hello")
+
+    assert datum.path == "report.txt"
+    assert datum.content == "hello"
+    assert datum.statement_text() == 'write report.txt "hello"'
+
+
 def test_classify_value_identifies_number() -> None:
     assert classify_value(3) == "Number"
 
@@ -89,6 +103,14 @@ def test_appraise_counter_revision_result_returns_appraisal_result() -> None:
     assert isinstance(result, AppraisalResult)
 
 
+def test_appraise_file_write_result_returns_appraisal_result() -> None:
+    result = appraise_file_write_result(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert isinstance(result, AppraisalResult)
+
+
 def test_valid_arithmetic_result_is_accepted() -> None:
     result = appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -105,12 +127,30 @@ def test_counter_revision_result_is_accepted() -> None:
     assert "accepted" in result.summary
 
 
+def test_file_write_result_is_accepted() -> None:
+    result = appraise_file_write_result(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert result.accepted is True
+    assert "accepted" in result.summary
+
+
 def test_refused_counter_revision_result_is_refused() -> None:
     result = appraise_counter_revision_result(
         CounterIncrementDatum(name="counter", initial="cat")
     )
 
     assert isinstance(result, AppraisalResult)
+    assert result.accepted is False
+    assert "refused" in result.summary
+
+
+def test_refused_file_write_result_is_refused() -> None:
+    result = appraise_file_write_result(
+        FileWriteDatum(path="protected/report.txt", content="hello")
+    )
+
     assert result.accepted is False
     assert "refused" in result.summary
 
@@ -167,6 +207,14 @@ def test_appraise_refused_counter_revision_datum_returns_program() -> None:
     assert isinstance(program, Program)
 
 
+def test_appraise_file_write_datum_returns_program() -> None:
+    program = appraise_file_write_datum(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert isinstance(program, Program)
+
+
 def test_appraised_arithmetic_program_contains_visible_result() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
 
@@ -204,6 +252,71 @@ def test_appraised_counter_final_concept_removes_old_current_value() -> None:
         dictum.subject == "counter" and dictum.meaning == "0"
         for dictum in program.concept.dicta
     )
+
+
+def test_appraised_file_write_contains_disk_change() -> None:
+    program = appraise_file_write_datum(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert has_dictum_text(program, "write changes Disk")
+
+
+def test_appraised_file_write_contains_permission_qualification() -> None:
+    program = appraise_file_write_datum(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert has_dictum_text(program, "Permission qualifies for report.txt")
+
+
+def test_appraised_file_write_final_concept_contains_written_content() -> None:
+    program = appraise_file_write_datum(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert has_dictum_text(program, 'report.txt contains "hello"')
+
+
+def test_appraised_refused_file_write_contains_denied_permission() -> None:
+    program = appraise_file_write_datum(
+        FileWriteDatum(path="protected/report.txt", content="hello")
+    )
+
+    assert has_dictum_text(
+        program,
+        "Permission does not qualify for protected/report.txt",
+    )
+
+
+def test_appraised_refused_file_write_contains_permission_disparity() -> None:
+    result = appraise_file_write_result(
+        FileWriteDatum(path="protected/report.txt", content="hello")
+    )
+
+    assert result.disparity is not None
+    assert result.disparity.description == (
+        "write lacks Permission for protected/report.txt"
+    )
+    assert result.disparity.kind == "permission_denied"
+
+
+def test_appraised_refused_file_write_final_concept_has_no_written_content() -> None:
+    program = appraise_file_write_datum(
+        FileWriteDatum(path="protected/report.txt", content="hello")
+    )
+
+    assert not has_dictum_text(program, 'protected/report.txt contains "hello"')
+
+
+def test_appraised_refused_file_write_records_disk_unchanged() -> None:
+    result = appraise_file_write_result(
+        FileWriteDatum(path="protected/report.txt", content="hello")
+    )
+
+    assert result.revision is not None
+    revision_text = " ".join([*result.revision.changes, result.revision.note or ""])
+    assert "Disk unchanged" in revision_text
 
 
 def test_appraised_refused_counter_preserves_text_type() -> None:
@@ -420,3 +533,43 @@ def test_appraise_refused_counter_cli_renders_expected_visible_text() -> None:
     assert '* counter is "cat"' in result.output
     assert "* counter does not qualify as Number" in result.output
     assert "* counter revision refused" in result.output
+
+
+def test_appraise_file_write_cli_renders_expected_visible_text() -> None:
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["appraise-file-write-demo"])
+
+    assert result.exit_code == 0
+    assert 'Datum: write report.txt "hello"' in result.output
+    assert "* write changes Disk" in result.output
+    assert "* Permission qualifies for report.txt" in result.output
+    assert '* report.txt contains "hello"' in result.output
+    assert "* write accepted" in result.output
+
+
+def test_appraise_refused_file_write_cli_renders_expected_visible_text() -> None:
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["appraise-refused-file-write-demo"])
+
+    assert result.exit_code == 0
+    assert 'Datum: write protected/report.txt "hello"' in result.output
+    assert "* Permission does not qualify for protected/report.txt" in result.output
+    assert "* write lacks Permission for protected/report.txt" in result.output
+    assert "* write refused" in result.output
+
+
+def test_file_write_appraiser_does_not_create_real_files(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    appraise_file_write_datum(FileWriteDatum(path="report.txt", content="hello"))
+    appraise_file_write_datum(
+        FileWriteDatum(path="protected/report.txt", content="hello")
+    )
+
+    assert not Path("report.txt").exists()
+    assert not Path("protected").exists()

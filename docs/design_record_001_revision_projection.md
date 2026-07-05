@@ -116,6 +116,20 @@ without forcing each appraiser to repeat that boilerplate.
 
 This is still not syntax, not a general interpreter, and not a rule engine.
 
+## Mechanical File Write Appraisal
+
+The arithmetic and counter appraisers covered evaluation and Revision.
+
+The file write appraiser covers the effect boundary. It can mechanically accept
+`write report.txt "hello"` by recording Permission, intended Disk change, and
+the resulting file-content Dictum. It can also refuse
+`write protected/report.txt "hello"` by recording Permission Disparity and
+preserving Disk unchanged.
+
+This proves a world-changing operation can be accepted or refused mechanically
+without performing the real effect. It is still not syntax, not a runtime
+engine, and not actual IO.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

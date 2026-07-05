@@ -8,8 +8,10 @@ from dicta import __version__
 from dicta.core.appraise import (
     ArithmeticDatum,
     CounterIncrementDatum,
+    FileWriteDatum,
     appraise_arithmetic_datum,
     appraise_counter_revision_datum,
+    appraise_file_write_datum,
 )
 from dicta.core.models import Program
 from dicta.core.program import (
@@ -190,6 +192,19 @@ def file_write_demo() -> None:
 
 
 @app.command()
+def appraise_file_write_demo() -> None:
+    """Run the mechanically appraised structured file write demo."""
+
+    datum = FileWriteDatum(path="report.txt", content="hello")
+    _render_demo(
+        appraise_file_write_datum(datum),
+        datum.statement_text(),
+        show_purpose=True,
+        show_inference=True,
+    )
+
+
+@app.command()
 def refused_file_write_demo() -> None:
     """Run the hard-coded refused file write effect demo."""
 
@@ -197,6 +212,20 @@ def refused_file_write_demo() -> None:
         build_refused_file_write_demo_program(),
         'write protected/report.txt "hello"',
         show_disparity=True,
+    )
+
+
+@app.command()
+def appraise_refused_file_write_demo() -> None:
+    """Run the mechanically refused structured file write demo."""
+
+    datum = FileWriteDatum(path="protected/report.txt", content="hello")
+    _render_demo(
+        appraise_file_write_datum(datum),
+        datum.statement_text(),
+        show_purpose=True,
+        show_disparity=True,
+        show_inference=True,
     )
 
 

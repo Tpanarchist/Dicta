@@ -59,6 +59,20 @@ class CounterIncrementDatum(BaseModel):
         )
 
 
+class FileWriteDatum(BaseModel):
+    """Structured file write datum, not source syntax or real IO."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    content: str
+
+    def statement_text(self) -> str:
+        """Return the visible file write statement."""
+
+        return f"write {self.path} {_operand_text(self.content)}"
+
+
 class AppraisalResult(BaseModel):
     """Mechanical appraiser status plus resulting Program."""
 
@@ -251,6 +265,226 @@ def _remove_dictum(concept: Concept, subject: str, meaning: str) -> None:
         for dictum in concept.dicta
         if not (dictum.subject == subject and dictum.meaning == meaning)
     ]
+
+
+def _build_file_write_concept(datum: FileWriteDatum) -> tuple[Concept, Purpose]:
+    purpose = Purpose(statement="persist text to file", mode="appraisal")
+    concept = Concept(name="mechanical-file-write-appraisal", purpose=purpose)
+    input_qualification = checked(
+        basis="structured file write datum",
+        conditions=("demo input",),
+        timing="before effect",
+    )
+    operation_qualification = asserted(
+        basis="file write effect contract",
+        conditions=("FilePath", "Text"),
+        timing="before effect",
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.path,
+            "FilePath",
+            input_qualification,
+            display=f"{datum.path} is FilePath",
+            kind="type",
+            tags=("file", "path"),
+        ),
+    )
+    add_dictum(
+        concept,
+        typed_dictum(
+            datum.content,
+            basis="structured file write datum",
+            tags=("file",),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "accepts FilePath, Text",
+            operation_qualification,
+            display="write accepts FilePath, Text",
+            kind="operation",
+            tags=("file", "write"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "changes Disk",
+            operation_qualification,
+            display="write changes Disk",
+            kind="effect",
+            tags=("disk", "write"),
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "requires Permission",
+            operation_qualification,
+            display="write requires Permission",
+            kind="permission",
+            tags=("write",),
+        ),
+    )
+    return concept, purpose
+
+
+def _appraise_accepted_file_write(
+    datum: FileWriteDatum,
+    concept: Concept,
+    purpose: Purpose,
+) -> AppraisalResult:
+    permission_qualification = checked(
+        basis="demo permission policy",
+        conditions=(f"target is {datum.path}",),
+        timing="appraisal-time",
+    )
+    effect_qualification = checked(
+        basis="mechanical file write appraisal",
+        conditions=(f"Permission qualifies for {datum.path}",),
+        timing="after effect",
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "Permission",
+            f"qualifies for {datum.path}",
+            permission_qualification,
+            display=f"Permission qualifies for {datum.path}",
+            kind="permission",
+            tags=("write", datum.path),
+        ),
+    )
+    received = receive_datum(
+        datum,
+        source="dicta appraise-file-write-demo",
+        note="structured file write datum",
+    )
+    disparity = Disparity(
+        datum=received,
+        concept=concept,
+        purpose=purpose,
+        description=f"{datum.path} does not yet contain {_operand_text(datum.content)}",
+        severity="effect",
+        kind="missing_effect",
+        tags=("disk", "write"),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            datum.path,
+            f"contains {_operand_text(datum.content)}",
+            effect_qualification,
+            display=f"{datum.path} contains {_operand_text(datum.content)}",
+            kind="effect",
+            tags=("disk", datum.path),
+        ),
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="write may proceed because Permission qualifies",
+        basis=f"write requires Permission and Permission qualifies for {datum.path}",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="write accepted",
+        status="accepted",
+        kind="effect_accepted",
+        tags=("disk", "write"),
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            f"Concept records {datum.path} contains {_operand_text(datum.content)}",
+            "Concept records Disk changed by write",
+        ],
+        note="Disk changed by write",
+        kind="record_effect",
+        tags=("disk", "write"),
+    )
+    return _accepted_result(
+        datum=datum,
+        concept=concept,
+        revision=revision,
+        program_name="mechanical-file-write-appraisal",
+        summary="file write accepted",
+        disparity=disparity,
+        outcome=outcome,
+    )
+
+
+def _appraise_refused_file_write(
+    datum: FileWriteDatum,
+    concept: Concept,
+    purpose: Purpose,
+) -> AppraisalResult:
+    permission_qualification = checked(
+        basis="demo permission policy",
+        conditions=(f"target is {datum.path}",),
+        timing="appraisal-time",
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "Permission",
+            f"does not qualify for {datum.path}",
+            permission_qualification,
+            display=f"Permission does not qualify for {datum.path}",
+            kind="permission",
+            tags=("write", datum.path),
+        ),
+    )
+    received = receive_datum(
+        datum,
+        source="dicta appraise-refused-file-write-demo",
+        note="structured refused file write datum",
+    )
+    disparity = Disparity(
+        datum=received,
+        concept=concept,
+        purpose=purpose,
+        description=f"write lacks Permission for {datum.path}",
+        severity="refusing",
+        kind="permission_denied",
+        tags=("write", datum.path),
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="refuse write because Permission does not qualify",
+        basis="write requires Permission and Permission does not qualify",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="write refused",
+        status="refused",
+        kind="effect_refused",
+        tags=("disk", "write"),
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept records denied write attempt",
+            "Concept preserves Disk unchanged",
+        ],
+        note="denied write attempt; Disk unchanged",
+        kind="preserve_state",
+        tags=("disk", "write"),
+    )
+    return _refused_result(
+        datum=datum,
+        concept=concept,
+        revision=revision,
+        program_name="mechanical-refused-file-write-appraisal",
+        summary="file write refused",
+        disparity=disparity,
+        outcome=outcome,
+    )
 
 
 def _appraise_refused_counter_revision(
@@ -634,3 +868,22 @@ def appraise_counter_revision_datum(datum: CounterIncrementDatum) -> Program:
     """Appraise one structured counter revision into a Dicta Program."""
 
     return appraise_counter_revision_result(datum).program
+
+
+def appraise_file_write_result(datum: FileWriteDatum) -> AppraisalResult:
+    """Appraise one structured file write datum into a result shape."""
+
+    concept, purpose = _build_file_write_concept(datum)
+    if datum.path == "report.txt":
+        return _appraise_accepted_file_write(datum, concept, purpose)
+    if datum.path == "protected/report.txt":
+        return _appraise_refused_file_write(datum, concept, purpose)
+
+    msg = "only report.txt and protected/report.txt are supported by this appraiser"
+    raise ValueError(msg)
+
+
+def appraise_file_write_datum(datum: FileWriteDatum) -> Program:
+    """Appraise one structured file write datum into a Dicta Program."""
+
+    return appraise_file_write_result(datum).program
