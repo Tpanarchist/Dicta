@@ -9,6 +9,7 @@ def test_current_cli_commands_run() -> None:
     for command in [
         "version",
         "demo",
+        "appraise-arithmetic-demo",
         "invalid-demo",
         "counter-demo",
         "file-write-demo",

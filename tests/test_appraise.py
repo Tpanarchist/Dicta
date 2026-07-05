@@ -1,0 +1,72 @@
+from typer.testing import CliRunner
+
+from dicta.cli import app
+from dicta.core.appraise import ArithmeticDatum, appraise_arithmetic_datum
+from dicta.core.models import Program
+from dicta.core.query import has_dictum_meaning, has_dictum_text
+from dicta.core.qualification import QualificationStrength
+
+
+def test_arithmetic_datum_can_be_constructed() -> None:
+    datum = ArithmeticDatum(left=3, operator="+", right=4)
+
+    assert datum.left == 3
+    assert datum.operator == "+"
+    assert datum.right == 4
+    assert datum.expression_text() == "3 + 4"
+
+
+def test_appraise_arithmetic_datum_returns_program() -> None:
+    program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert isinstance(program, Program)
+
+
+def test_appraised_arithmetic_program_contains_visible_result() -> None:
+    program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert has_dictum_text(program, "3 + 4 is 7")
+
+
+def test_appraised_arithmetic_program_contains_result_meaning() -> None:
+    program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert has_dictum_meaning(program, "7")
+
+
+def test_appraised_arithmetic_result_has_checked_qualification() -> None:
+    program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
+    result_dictum = next(
+        dictum
+        for dictum in program.concept.dicta
+        if dictum.subject == "3 + 4" and dictum.meaning == "7"
+    )
+
+    assert result_dictum.qualification.strength == QualificationStrength.CHECKED
+    assert result_dictum.qualification.basis == "mechanical integer addition"
+
+
+def test_appraised_arithmetic_program_history_contains_revision() -> None:
+    program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert len(program.history) >= 1
+
+
+def test_appraised_arithmetic_revision_updates_final_concept() -> None:
+    program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert any(
+        dictum.subject == "3 + 4" and dictum.meaning == "7"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_appraise_arithmetic_cli_renders_expected_visible_text() -> None:
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["appraise-arithmetic-demo"])
+
+    assert result.exit_code == 0
+    assert "Datum: 3 + 4" in result.output
+    assert "* 3 + 4 is 7" in result.output
+    assert "* 3 + 4 evaluates to 7" in result.output

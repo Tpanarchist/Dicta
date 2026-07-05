@@ -36,6 +36,21 @@ That is the event-sourcing shape for Dicta:
 This remains future work. No parser, compiler, VM, lowering, or appraiser is
 introduced by this record.
 
+## First Mechanical Appraisal
+
+The earlier demos were hand-authored semantic records. They proved that the
+chain could be represented, but not that a Program could produce the chain from
+structured input.
+
+The first arithmetic appraiser is a deliberately tiny next step. It accepts a
+structured Datum, such as `ArithmeticDatum(left=3, operator="+", right=4)`,
+consults a Concept containing operand and operator Dicta, and produces the
+Disparity, Inference, Outcome, Revision, and final Program Concept
+mechanically.
+
+This is still not syntax. It does not parse source text, and it is not a
+general interpreter.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

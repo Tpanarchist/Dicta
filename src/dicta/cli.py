@@ -5,6 +5,7 @@ from importlib.metadata import PackageNotFoundError, version as metadata_version
 import typer
 
 from dicta import __version__
+from dicta.core.appraise import ArithmeticDatum, appraise_arithmetic_datum
 from dicta.core.models import Program
 from dicta.core.program import (
     build_agent_edit_demo_program,
@@ -96,6 +97,20 @@ def demo() -> None:
         show_qualification=True,
         show_purpose=False,
         show_inference=False,
+    )
+
+
+@app.command()
+def appraise_arithmetic_demo() -> None:
+    """Run the mechanically appraised structured arithmetic demo."""
+
+    datum = ArithmeticDatum(left=3, operator="+", right=4)
+    _render_demo(
+        appraise_arithmetic_datum(datum),
+        datum.expression_text(),
+        show_qualification=True,
+        show_purpose=True,
+        show_inference=True,
     )
 
 
