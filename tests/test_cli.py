@@ -10,6 +10,7 @@ def test_current_cli_commands_run() -> None:
         "version",
         "demo",
         "appraise-arithmetic-demo",
+        "appraise-invalid-arithmetic-demo",
         "invalid-demo",
         "counter-demo",
         "file-write-demo",

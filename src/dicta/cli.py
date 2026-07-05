@@ -115,6 +115,20 @@ def appraise_arithmetic_demo() -> None:
 
 
 @app.command()
+def appraise_invalid_arithmetic_demo() -> None:
+    """Run the mechanically appraised structured invalid arithmetic demo."""
+
+    datum = ArithmeticDatum(left=3, operator="+", right="cat")
+    _render_demo(
+        appraise_arithmetic_datum(datum),
+        datum.expression_text(),
+        show_purpose=True,
+        show_disparity=True,
+        show_inference=True,
+    )
+
+
+@app.command()
 def invalid_demo() -> None:
     """Run the hard-coded 3 + "cat" disparity demo."""
 

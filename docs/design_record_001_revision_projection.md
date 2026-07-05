@@ -51,6 +51,21 @@ mechanically.
 This is still not syntax. It does not parse source text, and it is not a
 general interpreter.
 
+## Mechanical Refusal
+
+The success appraiser proved that structured Datum can produce a valid semantic
+chain mechanically.
+
+The invalid arithmetic appraiser proves the negative twin. A structured Datum
+such as `ArithmeticDatum(left=3, operator="+", right="cat")` can produce
+qualified operand Dicta, reveal a type Disparity, derive refusal, witness a
+refused Outcome, and record a Revision without first becoming a host-language
+exception.
+
+This matters because invalidity belongs inside Dicta's semantic motion. Python
+exceptions remain an implementation boundary for unsupported appraiser shapes,
+not the primary representation of appraised invalid arithmetic.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

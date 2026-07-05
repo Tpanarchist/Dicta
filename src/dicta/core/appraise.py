@@ -28,7 +28,13 @@ class ArithmeticDatum(BaseModel):
     def expression_text(self) -> str:
         """Return the visible arithmetic expression."""
 
-        return f"{self.left} {self.operator} {self.right}"
+        return f"{_operand_text(self.left)} {self.operator} {_operand_text(self.right)}"
+
+
+def _operand_text(value: int | str) -> str:
+    if isinstance(value, str):
+        return f'"{value}"'
+    return str(value)
 
 
 def _number_dictum(value: int) -> tuple[str, str, str]:
@@ -78,6 +84,26 @@ def _add_number_literal(concept: Concept, value: int) -> None:
     )
 
 
+def _add_text_literal(concept: Concept, value: str) -> None:
+    subject = _operand_text(value)
+    literal_qualification = checked(
+        basis="structured arithmetic datum",
+        conditions=("str operand",),
+        timing="appraisal-time",
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            subject,
+            "Text",
+            literal_qualification,
+            display=f"{subject} is Text",
+            kind="type",
+            tags=("arithmetic", "text"),
+        ),
+    )
+
+
 def _find_operator_contract(concept: Concept, operator: str) -> bool:
     return any(
         dictum.subject == operator and dictum.meaning == "accepts Number, Number"
@@ -92,31 +118,13 @@ def _find_number_dictum(concept: Concept, value: int) -> bool:
     )
 
 
-def appraise_arithmetic_datum(datum: ArithmeticDatum) -> Program:
-    """Appraise one structured arithmetic datum into a Dicta Program."""
-
-    if datum.operator != "+":
-        msg = "only + is supported by the first arithmetic appraiser"
-        raise ValueError(msg)
+def _appraise_integer_addition(
+    datum: ArithmeticDatum,
+    concept: Concept,
+    purpose: Purpose,
+) -> Program:
     if not isinstance(datum.left, int) or not isinstance(datum.right, int):
-        msg = (
-            "only two integer operands are supported by the first "
-            "arithmetic appraiser"
-        )
-        raise ValueError(msg)
-
-    concept, purpose = _build_arithmetic_concept()
-    _add_number_literal(concept, datum.left)
-    _add_number_literal(concept, datum.right)
-
-    if not _find_number_dictum(concept, datum.left) or not _find_number_dictum(
-        concept,
-        datum.right,
-    ):
-        msg = "integer operands did not qualify as Number in the arithmetic Concept"
-        raise ValueError(msg)
-    if not _find_operator_contract(concept, datum.operator):
-        msg = "+ operator contract is absent from the arithmetic Concept"
+        msg = "integer addition appraisal requires two integer operands"
         raise ValueError(msg)
 
     expression = datum.expression_text()
@@ -176,3 +184,84 @@ def appraise_arithmetic_datum(datum: ArithmeticDatum) -> Program:
         Program(name="mechanical-arithmetic-appraisal", concept=concept),
         revision,
     )
+
+
+def _appraise_invalid_integer_text_addition(
+    datum: ArithmeticDatum,
+    concept: Concept,
+    purpose: Purpose,
+) -> Program:
+    received = receive_datum(
+        datum,
+        source="dicta appraise-invalid-arithmetic-demo",
+        note="structured invalid arithmetic datum",
+    )
+    disparity = Disparity(
+        datum=received,
+        concept=concept,
+        purpose=purpose,
+        description="+ does not qualify for Number, Text",
+        severity="rejecting",
+        kind="type_mismatch",
+        tags=("arithmetic",),
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="reject expression as invalid arithmetic",
+        basis="operand qualification mismatch",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="evaluation refused",
+        status="refused",
+        kind="refusal",
+        tags=("arithmetic",),
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=["Concept records invalid operand disparity"],
+        note="disparity qualifies refusal",
+        kind="record_result",
+        tags=("arithmetic", "refusal"),
+    )
+    return append_revision(
+        Program(name="mechanical-invalid-arithmetic-appraisal", concept=concept),
+        revision,
+    )
+
+
+def appraise_arithmetic_datum(datum: ArithmeticDatum) -> Program:
+    """Appraise one structured arithmetic datum into a Dicta Program."""
+
+    if datum.operator != "+":
+        msg = "only + is supported by the first arithmetic appraiser"
+        raise ValueError(msg)
+    if not isinstance(datum.left, int):
+        msg = "only integer left operands are supported by the first appraiser"
+        raise ValueError(msg)
+
+    concept, purpose = _build_arithmetic_concept()
+    _add_number_literal(concept, datum.left)
+
+    if isinstance(datum.right, int):
+        _add_number_literal(concept, datum.right)
+    elif isinstance(datum.right, str):
+        _add_text_literal(concept, datum.right)
+    else:
+        msg = "only integer or string right operands are supported"
+        raise ValueError(msg)
+
+    if not _find_number_dictum(concept, datum.left):
+        msg = "left operand did not qualify as Number in the arithmetic Concept"
+        raise ValueError(msg)
+    if not _find_operator_contract(concept, datum.operator):
+        msg = "+ operator contract is absent from the arithmetic Concept"
+        raise ValueError(msg)
+
+    if isinstance(datum.right, int):
+        if not _find_number_dictum(concept, datum.right):
+            msg = "right operand did not qualify as Number in the arithmetic Concept"
+            raise ValueError(msg)
+        return _appraise_integer_addition(datum, concept, purpose)
+
+    return _appraise_invalid_integer_text_addition(datum, concept, purpose)

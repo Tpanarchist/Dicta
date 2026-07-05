@@ -16,8 +16,25 @@ def test_arithmetic_datum_can_be_constructed() -> None:
     assert datum.expression_text() == "3 + 4"
 
 
+def test_invalid_arithmetic_datum_can_be_constructed() -> None:
+    datum = ArithmeticDatum(left=3, operator="+", right="cat")
+
+    assert datum.left == 3
+    assert datum.operator == "+"
+    assert datum.right == "cat"
+    assert datum.expression_text() == '3 + "cat"'
+
+
 def test_appraise_arithmetic_datum_returns_program() -> None:
     program = appraise_arithmetic_datum(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert isinstance(program, Program)
+
+
+def test_appraise_invalid_arithmetic_datum_returns_program() -> None:
+    program = appraise_arithmetic_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
 
     assert isinstance(program, Program)
 
@@ -61,6 +78,62 @@ def test_appraised_arithmetic_revision_updates_final_concept() -> None:
     )
 
 
+def test_appraised_invalid_arithmetic_contains_text_operand() -> None:
+    program = appraise_arithmetic_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+
+    assert has_dictum_text(program, '"cat" is Text')
+
+
+def test_appraised_invalid_arithmetic_contains_operator_contract() -> None:
+    program = appraise_arithmetic_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+
+    assert has_dictum_text(program, "+ accepts Number, Number")
+
+
+def test_appraised_invalid_arithmetic_contains_type_disparity() -> None:
+    program = appraise_arithmetic_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert disparity.description == "+ does not qualify for Number, Text"
+    assert disparity.kind == "type_mismatch"
+
+
+def test_appraised_invalid_arithmetic_outcome_is_refusal() -> None:
+    program = appraise_arithmetic_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+    outcome = program.history[-1].outcome
+
+    assert outcome.result == "evaluation refused"
+    assert outcome.status == "refused"
+
+
+def test_appraised_invalid_arithmetic_revision_records_disparity() -> None:
+    program = appraise_arithmetic_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+    revision = program.history[-1]
+
+    assert revision.changes == ["Concept records invalid operand disparity"]
+
+
+def test_appraised_invalid_arithmetic_has_no_success_result_dictum() -> None:
+    program = appraise_arithmetic_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+
+    assert not any(
+        dictum.subject == '3 + "cat"'
+        for dictum in program.concept.dicta
+    )
+
+
 def test_appraise_arithmetic_cli_renders_expected_visible_text() -> None:
     runner = CliRunner()
 
@@ -70,3 +143,15 @@ def test_appraise_arithmetic_cli_renders_expected_visible_text() -> None:
     assert "Datum: 3 + 4" in result.output
     assert "* 3 + 4 is 7" in result.output
     assert "* 3 + 4 evaluates to 7" in result.output
+
+
+def test_appraise_invalid_arithmetic_cli_renders_expected_visible_text() -> None:
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["appraise-invalid-arithmetic-demo"])
+
+    assert result.exit_code == 0
+    assert 'Datum: 3 + "cat"' in result.output
+    assert '* "cat" is Text' in result.output
+    assert "* + does not qualify for Number, Text" in result.output
+    assert "* evaluation refused" in result.output
