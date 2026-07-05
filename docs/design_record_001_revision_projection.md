@@ -66,6 +66,20 @@ This matters because invalidity belongs inside Dicta's semantic motion. Python
 exceptions remain an implementation boundary for unsupported appraiser shapes,
 not the primary representation of appraised invalid arithmetic.
 
+## Appraisal Result Shape
+
+The first appraisers produced Program records directly. That remains the public
+Program-facing behavior for callers that only need the semantic chain.
+
+`AppraisalResult` preserves the produced Program while also making the
+mechanical acceptance status explicit. It carries whether the appraisal was
+accepted, a short summary, and direct links to the Disparity, Outcome, and
+Revision that were produced.
+
+This shape is for future checkers, agents, and CLIs that need to inspect
+acceptance or refusal without unpacking Program history manually. It is still
+not syntax, not lowering, and not a full interpreter.
+
 ## Reference Direction
 
 Truth-maintenance systems are relevant because they preserve justifications for

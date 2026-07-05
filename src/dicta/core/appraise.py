@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-from dicta.core.models import Concept, Disparity, Inference, Program, Purpose
+from dicta.core.models import (
+    Concept,
+    Disparity,
+    Inference,
+    Outcome,
+    Program,
+    Purpose,
+    Revision,
+)
 from dicta.core.program import (
     add_dictum,
     append_revision,
@@ -29,6 +37,20 @@ class ArithmeticDatum(BaseModel):
         """Return the visible arithmetic expression."""
 
         return f"{_operand_text(self.left)} {self.operator} {_operand_text(self.right)}"
+
+
+class AppraisalResult(BaseModel):
+    """Mechanical appraiser status plus resulting Program."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    datum: object
+    program: Program
+    accepted: bool
+    summary: str
+    disparity: Disparity | None = None
+    outcome: Outcome | None = None
+    revision: Revision | None = None
 
 
 def _operand_text(value: int | str) -> str:
@@ -122,7 +144,7 @@ def _appraise_integer_addition(
     datum: ArithmeticDatum,
     concept: Concept,
     purpose: Purpose,
-) -> Program:
+) -> AppraisalResult:
     if not isinstance(datum.left, int) or not isinstance(datum.right, int):
         msg = "integer addition appraisal requires two integer operands"
         raise ValueError(msg)
@@ -180,9 +202,18 @@ def _appraise_integer_addition(
         kind="record_result",
         tags=("arithmetic",),
     )
-    return append_revision(
+    program = append_revision(
         Program(name="mechanical-arithmetic-appraisal", concept=concept),
         revision,
+    )
+    return AppraisalResult(
+        datum=datum,
+        program=program,
+        accepted=True,
+        summary="arithmetic expression accepted",
+        disparity=disparity,
+        outcome=outcome,
+        revision=revision,
     )
 
 
@@ -190,7 +221,7 @@ def _appraise_invalid_integer_text_addition(
     datum: ArithmeticDatum,
     concept: Concept,
     purpose: Purpose,
-) -> Program:
+) -> AppraisalResult:
     received = receive_datum(
         datum,
         source="dicta appraise-invalid-arithmetic-demo",
@@ -224,14 +255,23 @@ def _appraise_invalid_integer_text_addition(
         kind="record_result",
         tags=("arithmetic", "refusal"),
     )
-    return append_revision(
+    program = append_revision(
         Program(name="mechanical-invalid-arithmetic-appraisal", concept=concept),
         revision,
     )
+    return AppraisalResult(
+        datum=datum,
+        program=program,
+        accepted=False,
+        summary="arithmetic expression refused",
+        disparity=disparity,
+        outcome=outcome,
+        revision=revision,
+    )
 
 
-def appraise_arithmetic_datum(datum: ArithmeticDatum) -> Program:
-    """Appraise one structured arithmetic datum into a Dicta Program."""
+def appraise_arithmetic_result(datum: ArithmeticDatum) -> AppraisalResult:
+    """Appraise one structured arithmetic datum into a result shape."""
 
     if datum.operator != "+":
         msg = "only + is supported by the first arithmetic appraiser"
@@ -265,3 +305,9 @@ def appraise_arithmetic_datum(datum: ArithmeticDatum) -> Program:
         return _appraise_integer_addition(datum, concept, purpose)
 
     return _appraise_invalid_integer_text_addition(datum, concept, purpose)
+
+
+def appraise_arithmetic_datum(datum: ArithmeticDatum) -> Program:
+    """Appraise one structured arithmetic datum into a Dicta Program."""
+
+    return appraise_arithmetic_result(datum).program

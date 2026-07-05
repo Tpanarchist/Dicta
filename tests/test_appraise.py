@@ -1,7 +1,12 @@
 from typer.testing import CliRunner
 
 from dicta.cli import app
-from dicta.core.appraise import ArithmeticDatum, appraise_arithmetic_datum
+from dicta.core.appraise import (
+    AppraisalResult,
+    ArithmeticDatum,
+    appraise_arithmetic_datum,
+    appraise_arithmetic_result,
+)
 from dicta.core.models import Program
 from dicta.core.query import has_dictum_meaning, has_dictum_text
 from dicta.core.qualification import QualificationStrength
@@ -31,12 +36,53 @@ def test_appraise_arithmetic_datum_returns_program() -> None:
     assert isinstance(program, Program)
 
 
+def test_appraise_arithmetic_result_returns_appraisal_result() -> None:
+    result = appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert isinstance(result, AppraisalResult)
+
+
+def test_valid_arithmetic_result_is_accepted() -> None:
+    result = appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert result.accepted is True
+    assert "accepted" in result.summary
+
+
+def test_valid_arithmetic_result_contains_program_with_visible_result() -> None:
+    result = appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert has_dictum_text(result.program, "3 + 4 is 7")
+    assert result.outcome is not None
+    assert result.revision is not None
+
+
 def test_appraise_invalid_arithmetic_datum_returns_program() -> None:
     program = appraise_arithmetic_datum(
         ArithmeticDatum(left=3, operator="+", right="cat")
     )
 
     assert isinstance(program, Program)
+
+
+def test_invalid_arithmetic_result_is_refused() -> None:
+    result = appraise_arithmetic_result(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+
+    assert result.accepted is False
+    assert "refused" in result.summary
+
+
+def test_invalid_arithmetic_result_contains_type_mismatch_program() -> None:
+    result = appraise_arithmetic_result(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+
+    assert result.disparity is not None
+    assert result.disparity.kind == "type_mismatch"
+    assert result.disparity.description == "+ does not qualify for Number, Text"
+    assert result.program.history[-1].outcome.result == "evaluation refused"
 
 
 def test_appraised_arithmetic_program_contains_visible_result() -> None:
@@ -143,6 +189,7 @@ def test_appraise_arithmetic_cli_renders_expected_visible_text() -> None:
     assert "Datum: 3 + 4" in result.output
     assert "* 3 + 4 is 7" in result.output
     assert "* 3 + 4 evaluates to 7" in result.output
+    assert "arithmetic expression accepted" not in result.output
 
 
 def test_appraise_invalid_arithmetic_cli_renders_expected_visible_text() -> None:
@@ -155,3 +202,4 @@ def test_appraise_invalid_arithmetic_cli_renders_expected_visible_text() -> None
     assert '* "cat" is Text' in result.output
     assert "* + does not qualify for Number, Text" in result.output
     assert "* evaluation refused" in result.output
+    assert "arithmetic expression refused" not in result.output

@@ -1,6 +1,11 @@
 """Core semantic contracts for Dicta."""
 
-from dicta.core.appraise import ArithmeticDatum, appraise_arithmetic_datum
+from dicta.core.appraise import (
+    AppraisalResult,
+    ArithmeticDatum,
+    appraise_arithmetic_datum,
+    appraise_arithmetic_result,
+)
 from dicta.core.models import (
     Concept,
     Datum,
@@ -43,9 +48,11 @@ __all__ = [
     "Qualification",
     "QualificationStrength",
     "Revision",
+    "AppraisalResult",
     "ArithmeticDatum",
     "asserted",
     "appraise_arithmetic_datum",
+    "appraise_arithmetic_result",
     "checked",
     "dicta_by_kind",
     "dicta_by_qualification_strength",
