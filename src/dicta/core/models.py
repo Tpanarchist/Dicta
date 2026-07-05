@@ -39,6 +39,8 @@ class Dictum(BaseModel):
     meaning: str
     qualification: Qualification = Field(default_factory=Qualification)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    kind: str | None = None
+    tags: tuple[str, ...] = Field(default_factory=tuple)
 
 
 class Purpose(BaseModel):
@@ -71,6 +73,8 @@ class Disparity(BaseModel):
     purpose: Purpose
     description: str
     severity: str = Field(default="noted")
+    kind: str | None = None
+    tags: tuple[str, ...] = Field(default_factory=tuple)
 
 
 class Inference(BaseModel):
@@ -91,6 +95,8 @@ class Outcome(BaseModel):
     inference: Inference
     result: Any
     status: str = Field(default="observed")
+    kind: str | None = None
+    tags: tuple[str, ...] = Field(default_factory=tuple)
 
 
 class Revision(BaseModel):
@@ -101,6 +107,8 @@ class Revision(BaseModel):
     outcome: Outcome
     changes: list[str] = Field(default_factory=list)
     note: str | None = None
+    kind: str | None = None
+    tags: tuple[str, ...] = Field(default_factory=tuple)
 
 
 class Program(BaseModel):

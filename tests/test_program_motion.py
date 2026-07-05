@@ -176,6 +176,12 @@ def test_file_write_demo_revision_notes_disk_changed_by_write() -> None:
     assert "Disk changed by write" in revision_text
 
 
+def test_file_write_demo_contains_effect_kind_dictum() -> None:
+    program = build_file_write_demo_program()
+
+    assert any(dictum.kind == "effect" for dictum in program.concept.dicta)
+
+
 def test_refused_file_write_demo_produces_program() -> None:
     program = build_refused_file_write_demo_program()
 
@@ -239,6 +245,13 @@ def test_refused_file_write_demo_disparity_mentions_missing_permission() -> None
     disparity = program.history[-1].outcome.inference.from_disparity
 
     assert "write lacks Permission" in disparity.description
+
+
+def test_refused_file_write_demo_disparity_carries_permission_denied_kind() -> None:
+    program = build_refused_file_write_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert disparity.kind == "permission_denied"
 
 
 def test_supervised_worker_demo_produces_program() -> None:
@@ -435,6 +448,13 @@ def test_refused_agent_edit_demo_disparity_mentions_behavior_violation() -> None
     disparity = program.history[-1].outcome.inference.from_disparity
 
     assert "violates behavior preservation Purpose" in disparity.description
+
+
+def test_refused_agent_edit_demo_disparity_carries_behavior_changed_kind() -> None:
+    program = build_refused_agent_edit_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert disparity.kind == "behavior_changed"
 
 
 def test_refused_agent_edit_demo_outcome_or_revision_mentions_refusal() -> None:

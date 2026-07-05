@@ -30,6 +30,8 @@ def produce_dictum(
     meaning: str,
     qualification: Qualification | None = None,
     metadata: dict[str, Any] | None = None,
+    kind: str | None = None,
+    tags: tuple[str, ...] = (),
 ) -> Dictum:
     """Produce a bounded statement of meaning."""
 
@@ -38,6 +40,8 @@ def produce_dictum(
         meaning=meaning,
         qualification=qualification or Qualification(),
         metadata=metadata or {},
+        kind=kind,
+        tags=tags,
     )
 
 
@@ -54,20 +58,40 @@ def add_dictum(concept: Concept, dictum: Dictum) -> Concept:
     return concept
 
 
-def create_outcome(inference: Inference, result: Any, status: str = "observed") -> Outcome:
+def create_outcome(
+    inference: Inference,
+    result: Any,
+    status: str = "observed",
+    kind: str | None = None,
+    tags: tuple[str, ...] = (),
+) -> Outcome:
     """Create an Outcome from an Inference."""
 
-    return Outcome(inference=inference, result=result, status=status)
+    return Outcome(
+        inference=inference,
+        result=result,
+        status=status,
+        kind=kind,
+        tags=tags,
+    )
 
 
 def create_revision(
     outcome: Outcome,
     changes: list[str] | None = None,
     note: str | None = None,
+    kind: str | None = None,
+    tags: tuple[str, ...] = (),
 ) -> Revision:
     """Create a Revision from an Outcome."""
 
-    return Revision(outcome=outcome, changes=changes or [], note=note)
+    return Revision(
+        outcome=outcome,
+        changes=changes or [],
+        note=note,
+        kind=kind,
+        tags=tags,
+    )
 
 
 def append_revision(program: Program, revision: Revision) -> Program:
@@ -114,16 +138,30 @@ def _make_dictum(
     meaning: str,
     qualification: Qualification,
     display: str,
+    kind: str | None = None,
+    tags: tuple[str, ...] = (),
 ) -> Dictum:
-    return produce_dictum(subject, meaning, qualification, {"display": display})
+    return produce_dictum(
+        subject,
+        meaning,
+        qualification,
+        {"display": display},
+        kind=kind,
+        tags=tags,
+    )
 
 
 def _add_dicta(
     concept: Concept,
-    dicta: list[tuple[str, str, Qualification, str]],
+    dicta: list[tuple[Any, ...]],
 ) -> None:
-    for subject, meaning, qualification, display in dicta:
-        add_dictum(concept, _make_dictum(subject, meaning, qualification, display))
+    for subject, meaning, qualification, display, *category in dicta:
+        kind = category[0] if category else None
+        tags = category[1] if len(category) > 1 else ()
+        add_dictum(
+            concept,
+            _make_dictum(subject, meaning, qualification, display, kind, tags),
+        )
 
 
 def _make_program(name: str, concept: Concept, revision: Revision) -> Program:
@@ -186,11 +224,19 @@ def build_arithmetic_demo_program() -> Program:
         derived="3 + 4 is 7",
         basis="integer addition",
     )
-    outcome = create_outcome(inference=inference, result=7, status="evaluated")
+    outcome = create_outcome(
+        inference=inference,
+        result=7,
+        status="evaluated",
+        kind="value",
+        tags=("arithmetic",),
+    )
     revision = create_revision(
         outcome=outcome,
         changes=["concept records evaluated arithmetic dictum"],
         note="result qualifies by evaluation",
+        kind="record_result",
+        tags=("arithmetic",),
     )
     return _make_program("arithmetic-demo", concept, revision)
 
@@ -241,6 +287,8 @@ def build_invalid_arithmetic_demo_program() -> Program:
         purpose=purpose,
         description="+ does not qualify for Number, Text",
         severity="rejecting",
+        kind="type_mismatch",
+        tags=("arithmetic",),
     )
     inference = Inference(
         from_disparity=disparity,
@@ -251,11 +299,15 @@ def build_invalid_arithmetic_demo_program() -> Program:
         inference=inference,
         result="evaluation refused",
         status="refused",
+        kind="refusal",
+        tags=("arithmetic",),
     )
     revision = create_revision(
         outcome=outcome,
         changes=["Concept records invalid operand disparity"],
         note="disparity qualifies refusal",
+        kind="record_result",
+        tags=("arithmetic", "refusal"),
     )
     return _make_program("invalid-arithmetic-demo", concept, revision)
 
@@ -330,6 +382,8 @@ def build_counter_revision_demo_program() -> Program:
         inference=inference,
         result="counter is 1",
         status="revised",
+        kind="value",
+        tags=("counter",),
     )
     revision = create_revision(
         outcome=outcome,
@@ -338,6 +392,8 @@ def build_counter_revision_demo_program() -> Program:
             "Concept preserves counter is Number",
         ],
         note="counter is 0 to counter is 1",
+        kind="replace_value",
+        tags=("counter",),
     )
     return _make_program("counter-revision-demo", concept, revision)
 
@@ -388,24 +444,37 @@ def build_file_write_demo_program() -> Program:
                 operation_qualification,
                 "write accepts FilePath, Text",
             ),
-            ("write", "changes Disk", operation_qualification, "write changes Disk"),
+            (
+                "write",
+                "changes Disk",
+                operation_qualification,
+                "write changes Disk",
+                "effect",
+                ("disk", "write"),
+            ),
             (
                 "write",
                 "requires Permission",
                 operation_qualification,
                 "write requires Permission",
+                "permission",
+                ("write",),
             ),
             (
                 "Permission",
                 "qualifies for report.txt",
                 permission_qualification,
                 "Permission qualifies for report.txt",
+                "permission",
+                ("write", "report.txt"),
             ),
             (
                 "report.txt",
                 'contains "hello"',
                 effect_qualification,
                 'report.txt contains "hello"',
+                "effect",
+                ("disk", "report.txt"),
             ),
         ],
     )
@@ -426,6 +495,8 @@ def build_file_write_demo_program() -> Program:
         inference=inference,
         result="write accepted",
         status="accepted",
+        kind="effect_accepted",
+        tags=("disk", "write"),
     )
     revision = create_revision(
         outcome=outcome,
@@ -434,6 +505,8 @@ def build_file_write_demo_program() -> Program:
             "Concept records Disk changed by write",
         ],
         note="Disk changed by write",
+        kind="record_effect",
+        tags=("disk", "write"),
     )
     return _make_program("file-write-demo", concept, revision)
 
@@ -486,18 +559,29 @@ def build_refused_file_write_demo_program() -> Program:
                 operation_qualification,
                 "write accepts FilePath, Text",
             ),
-            ("write", "changes Disk", operation_qualification, "write changes Disk"),
+            (
+                "write",
+                "changes Disk",
+                operation_qualification,
+                "write changes Disk",
+                "effect",
+                ("disk", "write"),
+            ),
             (
                 "write",
                 "requires Permission",
                 operation_qualification,
                 "write requires Permission",
+                "permission",
+                ("write",),
             ),
             (
                 "Permission",
                 "does not qualify for protected/report.txt",
                 permission_qualification,
                 "Permission does not qualify for protected/report.txt",
+                "permission",
+                ("write", "protected/report.txt"),
             ),
         ],
     )
@@ -508,6 +592,8 @@ def build_refused_file_write_demo_program() -> Program:
         purpose=purpose,
         description="write lacks Permission for protected/report.txt",
         severity="refusing",
+        kind="permission_denied",
+        tags=("write", "protected/report.txt"),
     )
     inference = Inference(
         from_disparity=disparity,
@@ -518,6 +604,8 @@ def build_refused_file_write_demo_program() -> Program:
         inference=inference,
         result="write refused",
         status="refused",
+        kind="effect_refused",
+        tags=("disk", "write"),
     )
     revision = create_revision(
         outcome=outcome,
@@ -526,6 +614,8 @@ def build_refused_file_write_demo_program() -> Program:
             "Concept preserves Disk unchanged",
         ],
         note="denied write attempt; Disk unchanged",
+        kind="preserve_state",
+        tags=("disk", "write"),
     )
     return _make_program("refused-file-write-demo", concept, revision)
 
@@ -614,6 +704,8 @@ def build_supervised_worker_demo_program() -> Program:
         purpose=purpose,
         description="worker is not Alive under availability Purpose",
         severity="recovering",
+        kind="worker_unavailable",
+        tags=("worker", "supervision"),
     )
     inference = Inference(
         from_disparity=disparity,
@@ -624,6 +716,8 @@ def build_supervised_worker_demo_program() -> Program:
         inference=inference,
         result="worker restarted",
         status="restarted",
+        kind="restart",
+        tags=("worker", "supervision"),
     )
     revision = create_revision(
         outcome=outcome,
@@ -633,6 +727,8 @@ def build_supervised_worker_demo_program() -> Program:
             "Concept restores worker is Alive",
         ],
         note="worker restarted; restores worker is Alive",
+        kind="restore_state",
+        tags=("worker", "supervision"),
     )
     return _make_program("supervisor-demo", concept, revision)
 
@@ -678,7 +774,14 @@ def build_agent_edit_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            ("agent edit", "Datum", proposal_qualification, "agent edit is Datum"),
+            (
+                "agent edit",
+                "Datum",
+                proposal_qualification,
+                "agent edit is Datum",
+                "agent",
+                ("proposal",),
+            ),
             (
                 "add_one",
                 "accepts Number",
@@ -696,18 +799,24 @@ def build_agent_edit_demo_program() -> Program:
                 "equals 1 + x for Number",
                 equivalence_qualification,
                 "x + 1 equals 1 + x for Number",
+                "equivalence",
+                ("add_one", "number"),
             ),
             (
                 "agent edit",
                 "preserves add_one behavior",
                 acceptance_qualification,
                 "agent edit preserves add_one behavior",
+                "behavior",
+                ("agent", "add_one"),
             ),
             (
                 "agent edit",
                 "qualifies by checked equivalence",
                 acceptance_qualification,
                 "agent edit qualifies by checked equivalence",
+                "agent",
+                ("checked_equivalence",),
             ),
         ],
     )
@@ -728,6 +837,8 @@ def build_agent_edit_demo_program() -> Program:
         inference=inference,
         result="agent edit accepted",
         status="accepted",
+        kind="agent_acceptance",
+        tags=("agent", "add_one"),
     )
     revision = create_revision(
         outcome=outcome,
@@ -736,6 +847,8 @@ def build_agent_edit_demo_program() -> Program:
             "Concept preserves add_one behavior",
         ],
         note="agent edit accepted; preserves add_one behavior",
+        kind="accept_agent_edit",
+        tags=("agent", "add_one"),
     )
     return _make_program("agent-edit-demo", concept, revision)
 
@@ -781,7 +894,14 @@ def build_refused_agent_edit_demo_program() -> Program:
     _add_dicta(
         concept,
         [
-            ("agent edit", "Datum", proposal_qualification, "agent edit is Datum"),
+            (
+                "agent edit",
+                "Datum",
+                proposal_qualification,
+                "agent edit is Datum",
+                "agent",
+                ("proposal",),
+            ),
             (
                 "add_one",
                 "accepts Number",
@@ -799,18 +919,24 @@ def build_refused_agent_edit_demo_program() -> Program:
                 "does not equal x + 2 for Number",
                 disparity_qualification,
                 "x + 1 does not equal x + 2 for Number",
+                "equivalence",
+                ("add_one", "number"),
             ),
             (
                 "agent edit",
                 "changes add_one behavior",
                 refusal_qualification,
                 "agent edit changes add_one behavior",
+                "behavior",
+                ("agent", "add_one"),
             ),
             (
                 "agent edit",
                 "does not qualify by checked equivalence",
                 refusal_qualification,
                 "agent edit does not qualify by checked equivalence",
+                "agent",
+                ("checked_equivalence",),
             ),
         ],
     )
@@ -821,6 +947,8 @@ def build_refused_agent_edit_demo_program() -> Program:
         purpose=purpose,
         description="agent edit violates behavior preservation Purpose",
         severity="refusing",
+        kind="behavior_changed",
+        tags=("agent", "add_one"),
     )
     inference = Inference(
         from_disparity=disparity,
@@ -831,6 +959,8 @@ def build_refused_agent_edit_demo_program() -> Program:
         inference=inference,
         result="agent edit refused",
         status="refused",
+        kind="agent_refusal",
+        tags=("agent", "add_one"),
     )
     revision = create_revision(
         outcome=outcome,
@@ -839,5 +969,7 @@ def build_refused_agent_edit_demo_program() -> Program:
             "Concept preserves original add_one behavior",
         ],
         note="agent edit refused; preserves original add_one behavior",
+        kind="refuse_agent_edit",
+        tags=("agent", "add_one"),
     )
     return _make_program("refused-agent-edit-demo", concept, revision)
