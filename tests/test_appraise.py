@@ -568,12 +568,86 @@ def test_appraised_counter_revision_has_replace_operation() -> None:
     )
 
     assert result.revision is not None
-    assert len(result.revision.operations) == 1
-    operation = result.revision.operations[0]
+    operation = next(
+        operation
+        for operation in result.revision.operations
+        if operation.operation == "replace_dictum"
+    )
     assert operation.operation == "replace_dictum"
     assert operation.subject == "counter"
     assert operation.from_meaning == "0"
     assert operation.to_meaning == "1"
+    assert operation.dictum is not None
+    assert operation.dictum.visible_text() == "counter is 1"
+
+
+def test_appraised_arithmetic_revision_has_add_operation() -> None:
+    result = appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4))
+
+    assert result.revision is not None
+    operation = next(
+        operation
+        for operation in result.revision.operations
+        if operation.operation == "add_dictum"
+    )
+    assert operation.subject == "3 + 4"
+    assert operation.to_meaning == "7"
+    assert operation.dictum is not None
+    assert operation.dictum.visible_text() == "3 + 4 is 7"
+
+
+def test_appraised_counter_revision_has_increment_add_operation() -> None:
+    result = appraise_counter_revision_result(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert result.revision is not None
+    operation = next(
+        operation
+        for operation in result.revision.operations
+        if operation.operation == "add_dictum"
+    )
+    assert operation.subject == "counter + 1"
+    assert operation.to_meaning == "1"
+    assert operation.dictum is not None
+    assert operation.dictum.visible_text() == "counter + 1 is 1"
+
+
+def test_appraised_file_write_revision_has_add_operation() -> None:
+    result = appraise_file_write_result(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert result.revision is not None
+    operation = next(
+        operation
+        for operation in result.revision.operations
+        if operation.operation == "add_dictum"
+    )
+    assert operation.subject == "report.txt"
+    assert operation.to_meaning == 'contains "hello"'
+    assert operation.dictum is not None
+    assert operation.dictum.visible_text() == 'report.txt contains "hello"'
+
+
+def test_appraised_worker_failure_revision_has_projection_operations() -> None:
+    result = appraise_worker_failure_result(WorkerFailureDatum())
+
+    assert result.revision is not None
+    remove_operation = next(
+        operation
+        for operation in result.revision.operations
+        if operation.operation == "remove_dictum"
+    )
+    add_texts = {
+        operation.dictum.visible_text()
+        for operation in result.revision.operations
+        if operation.operation == "add_dictum" and operation.dictum is not None
+    }
+    assert remove_operation.subject == "worker"
+    assert remove_operation.from_meaning == "not Alive"
+    assert "worker restart accepted" in add_texts
+    assert "worker is Alive" in add_texts
 
 
 def test_appraised_arithmetic_result_has_checked_qualification() -> None:

@@ -21,11 +21,11 @@ Revision remains intentionally small. It still carries human-readable change
 notes, but the final Concept in demos may now represent the after-state instead
 of carrying superseded state as if it were current meaning.
 
-## Deferred Rule
+## Incremental Rule
 
-Future Revision records should carry structured operations, such as adding,
-removing, or replacing Dicta. A Concept projection can then be derived by folding
-those Revisions over prior state.
+Revision records may carry structured operations, such as adding, removing, or
+replacing Dicta. A Concept projection can then be derived by folding those
+Revisions over prior state.
 
 That is the event-sourcing shape for Dicta:
 
@@ -33,8 +33,22 @@ That is the event-sourcing shape for Dicta:
 - Concept is the projection.
 - Disparity is evidence from the before-state.
 
-This remains future work. No parser, compiler, VM, lowering, or appraiser is
+This remains incremental work. No parser, compiler, VM, or lowering is
 introduced by this record.
+
+## Projection Implemented for Mechanical Appraisers
+
+Mechanical appraisers now use structured `RevisionOperation` records for
+accepted state changes and derive the final Program Concept by folding those
+operations over the before-state Concept.
+
+This applies to the current mechanical arithmetic, counter, accepted
+file-write, and supervised-worker recovery paths. Refused appraisals without
+state-changing operations preserve their before-state Concept while recording
+refusal history.
+
+Hard-coded demos remain semantic fixtures. This is still not parser work,
+compiler work, VM work, lowering, real IO, or real process supervision.
 
 ## First Mechanical Appraisal
 

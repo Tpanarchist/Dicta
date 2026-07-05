@@ -37,6 +37,7 @@ from dicta.core.qualification import (
     proved,
     tested,
 )
+from dicta.core.projection import project_concept
 from dicta.core.query import (
     dicta_by_kind,
     dicta_by_qualification_strength,
@@ -85,6 +86,7 @@ __all__ = [
     "has_dictum_meaning",
     "has_dictum_text",
     "outcomes_by_kind",
+    "project_concept",
     "proved",
     "revisions_by_kind",
     "tested",

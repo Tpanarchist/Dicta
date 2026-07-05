@@ -128,6 +128,7 @@ class RevisionOperation(BaseModel):
     subject: str
     from_meaning: str | None = None
     to_meaning: str | None = None
+    dictum: Dictum | None = None
     note: str | None = None
 
 

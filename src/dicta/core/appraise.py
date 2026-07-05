@@ -23,6 +23,7 @@ from dicta.core.program import (
     produce_dictum,
     receive_datum,
 )
+from dicta.core.projection import project_concept
 from dicta.core.qualification import asserted, checked
 
 
@@ -166,7 +167,11 @@ def _appraisal_result(
     disparity: Disparity,
     outcome: Outcome,
 ) -> AppraisalResult:
-    program = append_revision(Program(name=program_name, concept=concept), revision)
+    final_concept = project_concept(concept, (revision,))
+    program = append_revision(
+        Program(name=program_name, concept=final_concept),
+        revision,
+    )
     return AppraisalResult(
         datum=datum,
         program=program,
@@ -272,14 +277,6 @@ def _find_number_dictum(concept: Concept, value: int) -> bool:
         dictum.subject == str(value) and dictum.meaning == "Number"
         for dictum in concept.dicta
     )
-
-
-def _remove_dictum(concept: Concept, subject: str, meaning: str) -> None:
-    concept.dicta = [
-        dictum
-        for dictum in concept.dicta
-        if not (dictum.subject == subject and dictum.meaning == meaning)
-    ]
 
 
 def _build_file_write_concept(datum: FileWriteDatum) -> tuple[Concept, Purpose]:
@@ -390,16 +387,13 @@ def _appraise_accepted_file_write(
         kind="missing_effect",
         tags=("disk", "write"),
     )
-    add_dictum(
-        concept,
-        produce_dictum(
-            datum.path,
-            f"contains {_operand_text(datum.content)}",
-            effect_qualification,
-            display=f"{datum.path} contains {_operand_text(datum.content)}",
-            kind="effect",
-            tags=("disk", datum.path),
-        ),
+    content_dictum = produce_dictum(
+        datum.path,
+        f"contains {_operand_text(datum.content)}",
+        effect_qualification,
+        display=f"{datum.path} contains {_operand_text(datum.content)}",
+        kind="effect",
+        tags=("disk", datum.path),
     )
     inference = Inference(
         from_disparity=disparity,
@@ -422,6 +416,15 @@ def _appraise_accepted_file_write(
         note="Disk changed by write",
         kind="record_effect",
         tags=("disk", "write"),
+        operations=(
+            RevisionOperation(
+                operation="add_dictum",
+                subject=content_dictum.subject,
+                to_meaning=content_dictum.meaning,
+                dictum=content_dictum,
+                note="record written file content",
+            ),
+        ),
     )
     return _accepted_result(
         datum=datum,
@@ -530,28 +533,21 @@ def _appraise_worker_restart(
         tags=(datum.worker_name, "supervision"),
     )
 
-    _remove_dictum(concept, datum.worker_name, "not Alive")
-    add_dictum(
-        concept,
-        produce_dictum(
-            f"{datum.worker_name} restart",
-            "accepted",
-            restart_qualification,
-            display=f"{datum.worker_name} restart accepted",
-            kind="supervision",
-            tags=(datum.worker_name, "supervision"),
-        ),
+    restart_dictum = produce_dictum(
+        f"{datum.worker_name} restart",
+        "accepted",
+        restart_qualification,
+        display=f"{datum.worker_name} restart accepted",
+        kind="supervision",
+        tags=(datum.worker_name, "supervision"),
     )
-    add_dictum(
-        concept,
-        produce_dictum(
-            datum.worker_name,
-            "Alive",
-            restart_qualification,
-            display=f"{datum.worker_name} is Alive",
-            kind="status",
-            tags=(datum.worker_name, "supervision"),
-        ),
+    restored_alive_dictum = produce_dictum(
+        datum.worker_name,
+        "Alive",
+        restart_qualification,
+        display=f"{datum.worker_name} is Alive",
+        kind="status",
+        tags=(datum.worker_name, "supervision"),
     )
 
     inference = Inference(
@@ -576,6 +572,28 @@ def _appraise_worker_restart(
         note="worker restarted; restores worker is Alive",
         kind="restore_state",
         tags=(datum.worker_name, "supervision"),
+        operations=(
+            RevisionOperation(
+                operation="remove_dictum",
+                subject=datum.worker_name,
+                from_meaning="not Alive",
+                note=f"remove failed {datum.worker_name} status",
+            ),
+            RevisionOperation(
+                operation="add_dictum",
+                subject=restart_dictum.subject,
+                to_meaning=restart_dictum.meaning,
+                dictum=restart_dictum,
+                note=f"record {datum.worker_name} restart accepted",
+            ),
+            RevisionOperation(
+                operation="add_dictum",
+                subject=restored_alive_dictum.subject,
+                to_meaning=restored_alive_dictum.meaning,
+                dictum=restored_alive_dictum,
+                note=f"restore {datum.worker_name} Alive",
+            ),
+        ),
     )
     return _accepted_result(
         datum=datum,
@@ -674,16 +692,13 @@ def _appraise_integer_addition(
         conditions=("Number operands", "+ accepts Number, Number"),
         timing="appraisal-time",
     )
-    add_dictum(
-        concept,
-        produce_dictum(
-            expression,
-            str(result),
-            result_qualification,
-            display=f"{expression} is {result}",
-            kind="value",
-            tags=("arithmetic",),
-        ),
+    result_dictum = produce_dictum(
+        expression,
+        str(result),
+        result_qualification,
+        display=f"{expression} is {result}",
+        kind="value",
+        tags=("arithmetic",),
     )
 
     inference = Inference(
@@ -704,6 +719,15 @@ def _appraise_integer_addition(
         note="result qualifies by mechanical appraisal",
         kind="record_result",
         tags=("arithmetic",),
+        operations=(
+            RevisionOperation(
+                operation="add_dictum",
+                subject=result_dictum.subject,
+                to_meaning=result_dictum.meaning,
+                dictum=result_dictum,
+                note="record evaluated arithmetic dictum",
+            ),
+        ),
     )
     return _accepted_result(
         datum=datum,
@@ -899,28 +923,21 @@ def appraise_counter_revision_result(
         tags=("counter",),
     )
 
-    _remove_dictum(concept, datum.name, str(datum.initial))
-    add_dictum(
-        concept,
-        produce_dictum(
-            f"{datum.name} + {datum.increment}",
-            str(revised_value),
-            revision_qualification,
-            display=f"{datum.name} + {datum.increment} is {revised_value}",
-            kind="value",
-            tags=("counter", "arithmetic"),
-        ),
+    increment_dictum = produce_dictum(
+        f"{datum.name} + {datum.increment}",
+        str(revised_value),
+        revision_qualification,
+        display=f"{datum.name} + {datum.increment} is {revised_value}",
+        kind="value",
+        tags=("counter", "arithmetic"),
     )
-    add_dictum(
-        concept,
-        produce_dictum(
-            datum.name,
-            str(revised_value),
-            revision_qualification,
-            display=f"{datum.name} is {revised_value}",
-            kind="value",
-            tags=("counter",),
-        ),
+    revised_value_dictum = produce_dictum(
+        datum.name,
+        str(revised_value),
+        revision_qualification,
+        display=f"{datum.name} is {revised_value}",
+        kind="value",
+        tags=("counter",),
     )
 
     inference = Inference(
@@ -935,11 +952,19 @@ def appraise_counter_revision_result(
         kind="value",
         tags=("counter",),
     )
-    operation = RevisionOperation(
+    add_increment_operation = RevisionOperation(
+        operation="add_dictum",
+        subject=increment_dictum.subject,
+        to_meaning=increment_dictum.meaning,
+        dictum=increment_dictum,
+        note=f"{datum.name} increment result recorded",
+    )
+    replace_value_operation = RevisionOperation(
         operation="replace_dictum",
         subject=datum.name,
         from_meaning=str(datum.initial),
         to_meaning=str(revised_value),
+        dictum=revised_value_dictum,
         note=f"{datum.name} current value revised",
     )
     revision = create_revision(
@@ -952,7 +977,7 @@ def appraise_counter_revision_result(
         note=f"{datum.name} is {datum.initial} to {datum.name} is {revised_value}",
         kind="replace_value",
         tags=("counter",),
-        operations=(operation,),
+        operations=(add_increment_operation, replace_value_operation),
     )
     return _accepted_result(
         datum=datum,
