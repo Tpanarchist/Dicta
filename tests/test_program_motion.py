@@ -1,6 +1,7 @@
 from dicta.core.models import Program
 from dicta.core.program import (
     build_arithmetic_demo_program,
+    build_counter_revision_demo_program,
     build_invalid_arithmetic_demo_program,
 )
 
@@ -68,3 +69,45 @@ def test_invalid_arithmetic_demo_represents_disparity_chain() -> None:
     assert outcome.result == "evaluation refused"
     assert outcome.status == "refused"
     assert revision.changes == ["Concept records invalid operand disparity"]
+
+
+def test_counter_revision_demo_produces_program() -> None:
+    program = build_counter_revision_demo_program()
+
+    assert isinstance(program, Program)
+
+
+def test_counter_revision_demo_history_contains_revision() -> None:
+    program = build_counter_revision_demo_program()
+
+    assert len(program.history) >= 1
+
+
+def test_counter_revision_demo_concept_contains_final_counter_value() -> None:
+    program = build_counter_revision_demo_program()
+
+    assert any(
+        dictum.subject == "counter" and dictum.meaning == "1"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_counter_revision_demo_preserves_counter_type() -> None:
+    program = build_counter_revision_demo_program()
+
+    assert any(
+        dictum.subject == "counter" and dictum.meaning == "Number"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_counter_revision_demo_records_replacement_meaning() -> None:
+    program = build_counter_revision_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "counter is 0" in revision_text
+    assert "counter is 1" in revision_text
+    assert "Concept replaces counter is 0 with counter is 1" in revision.changes
+    assert "Concept preserves counter is Number" in revision.changes

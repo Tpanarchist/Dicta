@@ -235,3 +235,114 @@ def build_invalid_arithmetic_demo_program() -> Program:
     )
     program = Program(name="invalid-arithmetic-demo", concept=concept)
     return append_revision(program, revision)
+
+
+def build_counter_revision_demo_program() -> Program:
+    """Build the hard-coded revision representation for counter increment."""
+
+    datum = receive_datum(
+        "counter = 0; counter = counter + 1",
+        source="dicta demo",
+        note="hard-coded counter revision",
+    )
+    purpose = Purpose(statement="revise counter by valid increment", mode="demo")
+    concept = Concept(name="counter-revision-demo", purpose=purpose)
+
+    type_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="counter binding",
+        conditions=["demo input"],
+        timing="before revision",
+    )
+    value_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="counter state",
+        conditions=["demo input"],
+        timing="before revision",
+    )
+    operator_qualification = Qualification(
+        strength=QualificationStrength.ASSERTED,
+        basis="arithmetic convention",
+        conditions=["Number, Number"],
+        timing="during revision",
+    )
+    revision_qualification = Qualification(
+        strength=QualificationStrength.TESTED,
+        basis="valid increment",
+        conditions=["counter is Number", "counter is 0"],
+        timing="after revision",
+    )
+
+    add_dictum(
+        concept,
+        produce_dictum(
+            "counter",
+            "Number",
+            type_qualification,
+            {"display": "counter is Number"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "counter",
+            "0",
+            value_qualification,
+            {"display": "counter is 0"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "+",
+            "accepts Number, Number",
+            operator_qualification,
+            {"display": "+ accepts Number, Number"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "counter + 1",
+            "1",
+            revision_qualification,
+            {"display": "counter + 1 is 1"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "counter",
+            "1",
+            revision_qualification,
+            {"display": "counter is 1"},
+        ),
+    )
+
+    disparity = Disparity(
+        datum=datum,
+        concept=concept,
+        purpose=purpose,
+        description="counter is 0 before a valid increment revision",
+        severity="revision",
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="counter may revise from 0 to 1",
+        basis="counter is Number and + accepts Number, Number",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="counter is 1",
+        status="revised",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept replaces counter is 0 with counter is 1",
+            "Concept preserves counter is Number",
+        ],
+        note="counter is 0 to counter is 1",
+    )
+    program = Program(name="counter-revision-demo", concept=concept)
+    return append_revision(program, revision)
