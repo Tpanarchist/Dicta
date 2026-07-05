@@ -5,7 +5,11 @@ from importlib.metadata import PackageNotFoundError, version as metadata_version
 import typer
 
 from dicta import __version__
-from dicta.core.program import build_arithmetic_demo_program, dictum_text
+from dicta.core.program import (
+    build_arithmetic_demo_program,
+    build_invalid_arithmetic_demo_program,
+    dictum_text,
+)
 
 app = typer.Typer(help="Dicta semantic-kernel prototype.")
 
@@ -42,6 +46,39 @@ def demo() -> None:
     typer.echo("")
     typer.echo("Qualification:")
     typer.echo(f"* {revision.note}")
+    typer.echo("")
+    typer.echo("Outcome:")
+    typer.echo(f"* {outcome.result}")
+    typer.echo("")
+    typer.echo("Revision:")
+    for change in revision.changes:
+        typer.echo(f"* {change}")
+
+
+@app.command()
+def invalid_demo() -> None:
+    """Run the hard-coded 3 + "cat" disparity demo."""
+
+    program = build_invalid_arithmetic_demo_program()
+    revision = program.history[-1]
+    outcome = revision.outcome
+    inference = outcome.inference
+    disparity = inference.from_disparity
+
+    typer.echo('Datum: 3 + "cat"')
+    typer.echo("")
+    typer.echo("Dicta:")
+    for dictum in program.concept.dicta:
+        typer.echo(f"* {dictum_text(dictum)}")
+    typer.echo("")
+    typer.echo("Purpose:")
+    typer.echo(f"* {program.concept.purpose.statement}")
+    typer.echo("")
+    typer.echo("Disparity:")
+    typer.echo(f"* {disparity.description}")
+    typer.echo("")
+    typer.echo("Inference:")
+    typer.echo(f"* {inference.derived}")
     typer.echo("")
     typer.echo("Outcome:")
     typer.echo(f"* {outcome.result}")

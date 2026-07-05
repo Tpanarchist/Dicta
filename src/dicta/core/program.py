@@ -162,3 +162,76 @@ def build_arithmetic_demo_program() -> Program:
     )
     program = Program(name="arithmetic-demo", concept=concept)
     return append_revision(program, revision)
+
+
+def build_invalid_arithmetic_demo_program() -> Program:
+    """Build the hard-coded disparity representation for 3 + "cat"."""
+
+    datum = receive_datum(
+        '3 + "cat"',
+        source="dicta demo",
+        note="hard-coded invalid arithmetic",
+    )
+    purpose = Purpose(statement="evaluate arithmetic expression", mode="demo")
+    concept = Concept(name="invalid-arithmetic-demo", purpose=purpose)
+
+    literal_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="hard-coded literal recognition",
+        conditions=["demo input"],
+        timing="demo",
+    )
+    operator_qualification = Qualification(
+        strength=QualificationStrength.ASSERTED,
+        basis="arithmetic convention",
+        conditions=["demo input"],
+        timing="demo",
+    )
+
+    add_dictum(
+        concept,
+        produce_dictum("3", "Number", literal_qualification, {"display": "3 is Number"}),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            '"cat"',
+            "Text",
+            literal_qualification,
+            {"display": '"cat" is Text'},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "+",
+            "accepts Number, Number",
+            operator_qualification,
+            {"display": "+ accepts Number, Number"},
+        ),
+    )
+
+    disparity = Disparity(
+        datum=datum,
+        concept=concept,
+        purpose=purpose,
+        description="+ does not qualify for Number, Text",
+        severity="rejecting",
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="reject expression as invalid arithmetic",
+        basis="operand qualification mismatch",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="evaluation refused",
+        status="refused",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=["Concept records invalid operand disparity"],
+        note="disparity qualifies refusal",
+    )
+    program = Program(name="invalid-arithmetic-demo", concept=concept)
+    return append_revision(program, revision)
