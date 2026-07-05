@@ -4,6 +4,7 @@ from dicta.core.program import (
     build_counter_revision_demo_program,
     build_file_write_demo_program,
     build_invalid_arithmetic_demo_program,
+    build_refused_file_write_demo_program,
 )
 
 
@@ -170,3 +171,68 @@ def test_file_write_demo_revision_notes_disk_changed_by_write() -> None:
     revision_text = " ".join([*revision.changes, revision.note or ""])
 
     assert "Disk changed by write" in revision_text
+
+
+def test_refused_file_write_demo_produces_program() -> None:
+    program = build_refused_file_write_demo_program()
+
+    assert isinstance(program, Program)
+
+
+def test_refused_file_write_demo_history_contains_revision() -> None:
+    program = build_refused_file_write_demo_program()
+
+    assert len(program.history) >= 1
+
+
+def test_refused_file_write_demo_concept_contains_disk_change_dictum() -> None:
+    program = build_refused_file_write_demo_program()
+
+    assert any(
+        dictum.subject == "write" and dictum.meaning == "changes Disk"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_refused_file_write_demo_concept_contains_permission_requirement() -> None:
+    program = build_refused_file_write_demo_program()
+
+    assert any(
+        dictum.subject == "write" and dictum.meaning == "requires Permission"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_refused_file_write_demo_concept_contains_denied_permission() -> None:
+    program = build_refused_file_write_demo_program()
+
+    assert any(
+        dictum.subject == "Permission"
+        and dictum.meaning == "does not qualify for protected/report.txt"
+        for dictum in program.concept.dicta
+    )
+
+
+def test_refused_file_write_demo_revision_mentions_denied_write_attempt() -> None:
+    program = build_refused_file_write_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "denied write attempt" in revision_text
+
+
+def test_refused_file_write_demo_revision_mentions_disk_unchanged() -> None:
+    program = build_refused_file_write_demo_program()
+    revision = program.history[-1]
+
+    revision_text = " ".join([*revision.changes, revision.note or ""])
+
+    assert "Disk unchanged" in revision_text
+
+
+def test_refused_file_write_demo_disparity_mentions_missing_permission() -> None:
+    program = build_refused_file_write_demo_program()
+    disparity = program.history[-1].outcome.inference.from_disparity
+
+    assert "write lacks Permission" in disparity.description

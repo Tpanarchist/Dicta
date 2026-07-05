@@ -475,3 +475,117 @@ def build_file_write_demo_program() -> Program:
     )
     program = Program(name="file-write-demo", concept=concept)
     return append_revision(program, revision)
+
+
+def build_refused_file_write_demo_program() -> Program:
+    """Build the hard-coded effect representation for a refused file write."""
+
+    datum = receive_datum(
+        'write protected/report.txt "hello"',
+        source="dicta demo",
+        note="hard-coded refused file write effect",
+    )
+    purpose = Purpose(statement="persist text to file", mode="demo")
+    concept = Concept(name="refused-file-write-demo", purpose=purpose)
+
+    input_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="hard-coded write input",
+        conditions=["demo input"],
+        timing="before refusal",
+    )
+    operation_qualification = Qualification(
+        strength=QualificationStrength.ASSERTED,
+        basis="file write effect contract",
+        conditions=["FilePath", "Text"],
+        timing="before refusal",
+    )
+    permission_qualification = Qualification(
+        strength=QualificationStrength.CHECKED,
+        basis="demo permission denial",
+        conditions=["protected/report.txt"],
+        timing="before refusal",
+    )
+
+    add_dictum(
+        concept,
+        produce_dictum(
+            "protected/report.txt",
+            "FilePath",
+            input_qualification,
+            {"display": "protected/report.txt is FilePath"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            '"hello"',
+            "Text",
+            input_qualification,
+            {"display": '"hello" is Text'},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "accepts FilePath, Text",
+            operation_qualification,
+            {"display": "write accepts FilePath, Text"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "changes Disk",
+            operation_qualification,
+            {"display": "write changes Disk"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "write",
+            "requires Permission",
+            operation_qualification,
+            {"display": "write requires Permission"},
+        ),
+    )
+    add_dictum(
+        concept,
+        produce_dictum(
+            "Permission",
+            "does not qualify for protected/report.txt",
+            permission_qualification,
+            {"display": "Permission does not qualify for protected/report.txt"},
+        ),
+    )
+
+    disparity = Disparity(
+        datum=datum,
+        concept=concept,
+        purpose=purpose,
+        description="write lacks Permission for protected/report.txt",
+        severity="refusing",
+    )
+    inference = Inference(
+        from_disparity=disparity,
+        derived="refuse write because Permission does not qualify",
+        basis="write requires Permission and Permission does not qualify",
+    )
+    outcome = create_outcome(
+        inference=inference,
+        result="write refused",
+        status="refused",
+    )
+    revision = create_revision(
+        outcome=outcome,
+        changes=[
+            "Concept records denied write attempt",
+            "Concept preserves Disk unchanged",
+        ],
+        note="denied write attempt; Disk unchanged",
+    )
+    program = Program(name="refused-file-write-demo", concept=concept)
+    return append_revision(program, revision)
