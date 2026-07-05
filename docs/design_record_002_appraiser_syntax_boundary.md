@@ -92,3 +92,14 @@ registry only if the current appraisers need it.
 
 Do not implement source syntax until there is a clear mapping from source forms
 to structured Datum.
+
+## Structured Datum Routing
+
+Routing is not parsing.
+
+`appraise_structured_datum()` receives already-structured Datum and dispatches
+it to the matching mechanical appraiser.
+
+A future parser may produce these structured Datum forms, but parser work
+remains deferred. The router does not read source text, infer syntax, compile,
+lower, or execute.

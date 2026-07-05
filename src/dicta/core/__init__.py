@@ -12,6 +12,8 @@ from dicta.core.appraise import (
     appraise_counter_revision_result,
     appraise_file_write_datum,
     appraise_file_write_result,
+    appraise_structured_datum,
+    appraise_structured_program,
     appraise_worker_failure_datum,
     appraise_worker_failure_result,
 )
@@ -71,6 +73,8 @@ __all__ = [
     "appraise_counter_revision_result",
     "appraise_file_write_datum",
     "appraise_file_write_result",
+    "appraise_structured_datum",
+    "appraise_structured_program",
     "appraise_worker_failure_datum",
     "appraise_worker_failure_result",
     "checked",

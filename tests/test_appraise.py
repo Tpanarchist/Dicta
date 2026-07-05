@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
@@ -16,6 +17,8 @@ from dicta.core.appraise import (
     appraise_counter_revision_result,
     appraise_file_write_datum,
     appraise_file_write_result,
+    appraise_structured_datum,
+    appraise_structured_program,
     appraise_worker_failure_datum,
     appraise_worker_failure_result,
     classify_value,
@@ -242,6 +245,85 @@ def test_appraise_file_write_datum_returns_program() -> None:
 
 def test_appraise_worker_failure_datum_returns_program() -> None:
     program = appraise_worker_failure_datum(WorkerFailureDatum())
+
+    assert isinstance(program, Program)
+
+
+def test_structured_datum_routes_arithmetic_success() -> None:
+    result = appraise_structured_datum(
+        ArithmeticDatum(left=3, operator="+", right=4)
+    )
+
+    assert result.accepted is True
+    assert has_dictum_text(result.program, "3 + 4 is 7")
+
+
+def test_structured_datum_routes_arithmetic_refusal() -> None:
+    result = appraise_structured_datum(
+        ArithmeticDatum(left=3, operator="+", right="cat")
+    )
+
+    assert result.accepted is False
+    assert result.disparity is not None
+    assert result.disparity.kind == "type_mismatch"
+
+
+def test_structured_datum_routes_counter_success() -> None:
+    result = appraise_structured_datum(
+        CounterIncrementDatum(name="counter", initial=0)
+    )
+
+    assert result.accepted is True
+    assert has_dictum_text(result.program, "counter is 1")
+
+
+def test_structured_datum_routes_counter_refusal() -> None:
+    result = appraise_structured_datum(
+        CounterIncrementDatum(name="counter", initial="cat")
+    )
+
+    assert result.accepted is False
+    assert has_dictum_text(result.program, 'counter is "cat"')
+
+
+def test_structured_datum_routes_file_write_success() -> None:
+    result = appraise_structured_datum(
+        FileWriteDatum(path="report.txt", content="hello")
+    )
+
+    assert result.accepted is True
+    assert has_dictum_text(result.program, 'report.txt contains "hello"')
+
+
+def test_structured_datum_routes_file_write_refusal() -> None:
+    result = appraise_structured_datum(
+        FileWriteDatum(path="protected/report.txt", content="hello")
+    )
+
+    assert result.accepted is False
+    assert result.disparity is not None
+    assert result.disparity.description == (
+        "write lacks Permission for protected/report.txt"
+    )
+
+
+def test_structured_datum_routes_worker_recovery() -> None:
+    result = appraise_structured_datum(WorkerFailureDatum())
+
+    assert result.accepted is True
+    assert result.outcome is not None
+    assert result.outcome.result == "worker restarted"
+
+
+def test_structured_datum_rejects_unsupported_objects() -> None:
+    with pytest.raises(ValueError, match="unsupported structured Datum"):
+        appraise_structured_datum(object())
+
+
+def test_appraise_structured_program_returns_program() -> None:
+    program = appraise_structured_program(
+        ArithmeticDatum(left=3, operator="+", right=4)
+    )
 
     assert isinstance(program, Program)
 

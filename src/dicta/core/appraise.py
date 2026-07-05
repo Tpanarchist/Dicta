@@ -1098,3 +1098,25 @@ def appraise_worker_failure_datum(datum: WorkerFailureDatum) -> Program:
     """Appraise one structured worker failure into a Dicta Program."""
 
     return appraise_worker_failure_result(datum).program
+
+
+def appraise_structured_datum(datum: object) -> AppraisalResult:
+    """Route one supported structured Datum to its mechanical appraiser."""
+
+    if isinstance(datum, ArithmeticDatum):
+        return appraise_arithmetic_result(datum)
+    if isinstance(datum, CounterIncrementDatum):
+        return appraise_counter_revision_result(datum)
+    if isinstance(datum, FileWriteDatum):
+        return appraise_file_write_result(datum)
+    if isinstance(datum, WorkerFailureDatum):
+        return appraise_worker_failure_result(datum)
+
+    msg = f"unsupported structured Datum: {type(datum).__name__}"
+    raise ValueError(msg)
+
+
+def appraise_structured_program(datum: object) -> Program:
+    """Route one supported structured Datum and return its Program."""
+
+    return appraise_structured_datum(datum).program
