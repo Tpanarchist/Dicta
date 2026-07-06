@@ -18,7 +18,7 @@ def project_concept(
 
 def _apply_operation(concept: Concept, operation: RevisionOperation) -> None:
     if operation.operation == "add_dictum":
-        concept.dicta.append(_require_dictum(operation))
+        concept.dicta.append(_require_dictum_payload(operation))
         return
 
     if operation.operation == "remove_dictum":
@@ -26,18 +26,32 @@ def _apply_operation(concept: Concept, operation: RevisionOperation) -> None:
         return
 
     if operation.operation == "replace_dictum":
+        replacement = _require_dictum_payload(operation)
         _remove_dictum(concept, operation)
-        concept.dicta.append(_require_dictum(operation))
+        concept.dicta.append(replacement)
         return
 
     msg = f"unsupported RevisionOperation: {operation.operation}"
     raise ValueError(msg)
 
 
-def _require_dictum(operation: RevisionOperation) -> Dictum:
+def _require_dictum_payload(operation: RevisionOperation) -> Dictum:
     if operation.dictum is None:
         msg = f"{operation.operation} requires a Dictum payload"
         raise ValueError(msg)
+
+    if operation.to_meaning is None:
+        msg = f"{operation.operation} requires to_meaning"
+        raise ValueError(msg)
+
+    if operation.dictum.subject != operation.subject:
+        msg = f"{operation.operation} Dictum subject does not match operation subject"
+        raise ValueError(msg)
+
+    if operation.dictum.meaning != operation.to_meaning:
+        msg = f"{operation.operation} Dictum meaning does not match to_meaning"
+        raise ValueError(msg)
+
     return operation.dictum.model_copy(deep=True)
 
 
@@ -46,6 +60,7 @@ def _remove_dictum(concept: Concept, operation: RevisionOperation) -> None:
         msg = f"{operation.operation} requires from_meaning"
         raise ValueError(msg)
 
+    before_count = len(concept.dicta)
     concept.dicta = [
         dictum
         for dictum in concept.dicta
@@ -54,3 +69,10 @@ def _remove_dictum(concept: Concept, operation: RevisionOperation) -> None:
             and dictum.meaning == operation.from_meaning
         )
     ]
+
+    if len(concept.dicta) == before_count:
+        msg = (
+            f"{operation.operation} target not found: "
+            f"{operation.subject} is {operation.from_meaning}"
+        )
+        raise ValueError(msg)

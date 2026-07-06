@@ -47,6 +47,11 @@ file-write, and supervised-worker recovery paths. Refused appraisals without
 state-changing operations preserve their before-state Concept while recording
 refusal history.
 
+Projection raises if a `remove_dictum` or `replace_dictum` operation cannot find
+its target. A remove operation drops every Dictum matching the operation's
+subject and `from_meaning`. A replace operation removes those matches and
+appends the replacement Dictum at the tail of the projected Concept.
+
 Hard-coded demos remain semantic fixtures. This is still not parser work,
 compiler work, VM work, lowering, real IO, or real process supervision.
 

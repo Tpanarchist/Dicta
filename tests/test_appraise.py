@@ -25,8 +25,18 @@ from dicta.core.appraise import (
     typed_dictum,
 )
 from dicta.core.models import Program
+from dicta.core.projection import project_concept
 from dicta.core.query import has_dictum_meaning, has_dictum_text
 from dicta.core.qualification import QualificationStrength
+
+
+def _assert_replay_matches_final_program(result: AppraisalResult) -> None:
+    assert result.disparity is not None
+    assert result.revision is not None
+    assert project_concept(
+        result.disparity.concept,
+        (result.revision,),
+    ) == result.program.concept
 
 
 def test_arithmetic_datum_can_be_constructed() -> None:
@@ -247,6 +257,27 @@ def test_appraise_worker_failure_datum_returns_program() -> None:
     program = appraise_worker_failure_datum(WorkerFailureDatum())
 
     assert isinstance(program, Program)
+
+
+def test_appraiser_revisions_replay_to_final_program_concepts() -> None:
+    results = (
+        appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right=4)),
+        appraise_arithmetic_result(ArithmeticDatum(left=3, operator="+", right="cat")),
+        appraise_counter_revision_result(
+            CounterIncrementDatum(name="counter", initial=0)
+        ),
+        appraise_counter_revision_result(
+            CounterIncrementDatum(name="counter", initial="cat")
+        ),
+        appraise_file_write_result(FileWriteDatum(path="report.txt", content="hello")),
+        appraise_file_write_result(
+            FileWriteDatum(path="protected/report.txt", content="hello")
+        ),
+        appraise_worker_failure_result(WorkerFailureDatum()),
+    )
+
+    for result in results:
+        _assert_replay_matches_final_program(result)
 
 
 def test_structured_datum_routes_arithmetic_success() -> None:
